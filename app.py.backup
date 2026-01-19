@@ -1,0 +1,411 @@
+import streamlit as st
+import asyncio
+import pandas as pd
+import folium
+from streamlit_folium import folium_static
+from folium.plugins import HeatMap, MarkerCluster
+from core import SentinelAgent, generate_pdf_report, run_audit
+from datetime import datetime
+import json
+
+# Page configuration
+st.set_page_config(
+    page_title="Sentinel-V | Quantum AI Nerve Center",
+    layout="wide",
+    page_icon="🛡️",
+    initial_sidebar_state="expanded"
+)
+
+# Custom CSS for premium look
+st.markdown("""
+<style>
+    .main {
+        background-color: #0a0e27;
+    }
+    .stButton>button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 0.5rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+    }
+    .metric-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    h1 {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Initialize Session State
+if 'audit_data' not in st.session_state:
+    st.session_state.audit_data = None
+if 'scan_history' not in st.session_state:
+    st.session_state.scan_history = []
+if 'active_scan' not in st.session_state:
+    st.session_state.active_scan = False
+
+# Header
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.title("🛡️ Sentinel-V: Quantum AI Nerve Center")
+    st.caption("Next-Generation Agentic Defense Platform | ProSec Networks")
+with col2:
+    st.metric("System Status", "🟢 ACTIVE", delta="Operational")
+
+# Sidebar - Command Interface
+with st.sidebar:
+    st.header("⚡ Jarvis Command")
+    
+    # Domain input with validation
+    target = st.text_input(
+        "Strategic Domain",
+        value="prosec-networks.com",
+        help="Enter target domain for reconnaissance"
+    )
+    
+    # Advanced options (collapsible)
+    with st.expander("🔧 Advanced Options"):
+        scan_depth = st.select_slider(
+            "Scan Depth",
+            options=["Quick", "Standard", "Deep", "Comprehensive"],
+            value="Standard"
+        )
+        
+        enable_ssl_check = st.checkbox("SSL/TLS Analysis", value=True)
+        enable_geo_intel = st.checkbox("Geolocation Intelligence", value=True)
+        enable_threat_sim = st.checkbox("Threat Simulation", value=False)
+    
+    st.divider()
+    
+    # Main action button
+    if st.button("🚀 Initialize Agentic Defense", use_container_width=True):
+        if not target or len(target) < 4:
+            st.error("⚠️ Please enter a valid domain")
+        else:
+            st.session_state.active_scan = True
+            
+            with st.spinner("🔍 Deploying Sentinel Agents..."):
+                try:
+                    # Progress indicators
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    status_text.text("📡 Scanning certificate transparency logs...")
+                    progress_bar.progress(20)
+                    
+                    # Run async audit
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    
+                    status_text.text("🌐 Resolving IP addresses & geolocations...")
+                    progress_bar.progress(40)
+                    
+                    df = loop.run_until_complete(run_audit(target))
+                    
+                    status_text.text("🔐 Analyzing SSL/TLS configurations...")
+                    progress_bar.progress(60)
+                    
+                    status_text.text("⚛️ Computing quantum risk vectors...")
+                    progress_bar.progress(80)
+                    
+                    status_text.text("✅ Compiling intelligence report...")
+                    progress_bar.progress(100)
+                    
+                    # Store results
+                    st.session_state.audit_data = df
+                    st.session_state.scan_history.append({
+                        'domain': target,
+                        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        'assets_found': len(df)
+                    })
+                    
+                    st.session_state.active_scan = False
+                    st.success(f"✅ Audit complete! Discovered {len(df)} assets")
+                    st.balloons()
+                    
+                except Exception as e:
+                    st.error(f"❌ Scan failed: {str(e)}")
+                    st.session_state.active_scan = False
+                finally:
+                    loop.close()
+    
+    # Scan history
+    if st.session_state.scan_history:
+        st.divider()
+        st.subheader("📊 Scan History")
+        for scan in st.session_state.scan_history[-5:]:
+            with st.container():
+                st.text(f"🎯 {scan['domain']}")
+                st.caption(f"{scan['timestamp']} | {scan['assets_found']} assets")
+
+# Main Content Area
+if st.session_state.audit_data is None:
+    # Welcome screen
+    st.markdown("---")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        ### 🎯 Autonomous Discovery
+        Real-time subdomain enumeration via certificate transparency and DNS intelligence
+        """)
+    
+    with col2:
+        st.markdown("""
+        ### ⚛️ Quantum Risk Assessment
+        NIST PQC-aligned threat modeling with ML-KEM migration roadmaps
+        """)
+    
+    with col3:
+        st.markdown("""
+        ### 📋 NIS2 Compliance
+        Automated Article 21 reporting with executive-ready PDF exports
+        """)
+    
+    st.markdown("---")
+    st.info("🎬 **Initialize the Sentinel Agent to begin the boardroom audit.** Click 'Initialize Agentic Defense' in the sidebar.")
+    
+    # Preview map
+    st.subheader("🌐 Global Adversarial Radar")
+    m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB dark_matter")
+    folium_static(m, width=1200, height=400)
+
+else:
+    # Active audit display
+    df = st.session_state.audit_data
+    
+    # Metrics row
+    st.markdown("---")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    critical_count = len(df[df['Quantum_Risk'].str.contains('Critical', na=False)])
+    high_count = len(df[df['Quantum_Risk'].str.contains('High', na=False)])
+    avg_risk = df['Risk_Score'].mean()
+    
+    with col1:
+        st.metric("Total Assets", len(df), delta=f"+{len(df)} discovered")
+    with col2:
+        st.metric("Critical Risks", critical_count, delta="Requires immediate action" if critical_count > 0 else "Clear")
+    with col3:
+        st.metric("High Priority", high_count, delta="PQC migration needed" if high_count > 0 else "Stable")
+    with col4:
+        st.metric("Avg Risk Score", f"{avg_risk:.1f}/100", delta=f"{'⚠️ Elevated' if avg_risk > 50 else '✅ Acceptable'}")
+    
+    # Global Map
+    st.markdown("---")
+    st.subheader("🌐 Global Adversarial Radar")
+    
+    # Create sophisticated map
+    m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB dark_matter")
+    marker_cluster = MarkerCluster().add_to(m)
+    
+    # Prepare heatmap data
+    heat_data = []
+    
+    for _, row in df.iterrows():
+        if row['lat'] != 0.0 and row['lon'] != 0.0:
+            # Determine marker color
+            if "Critical" in row['Quantum_Risk']:
+                color = 'red'
+                icon = 'exclamation-triangle'
+            elif "High" in row['Quantum_Risk']:
+                color = 'orange'
+                icon = 'warning'
+            else:
+                color = 'blue'
+                icon = 'info-sign'
+            
+            # Create detailed popup
+            popup_html = f"""
+            <div style='width: 250px;'>
+                <h4 style='margin: 0; color: {color};'>{row['asset']}</h4>
+                <hr style='margin: 5px 0;'>
+                <b>Location:</b> {row['city']}, {row['country']}<br>
+                <b>IP:</b> {row['ip']}<br>
+                <b>ISP:</b> {row['isp']}<br>
+                <b>Risk Level:</b> {row['Quantum_Risk']}<br>
+                <b>Risk Score:</b> {row['Risk_Score']}/100<br>
+                <b>SSL Status:</b> {'✅ Valid' if row['ssl_valid'] else '❌ Invalid'}<br>
+                <b>Action:</b> {row['Solution'][:50]}...
+            </div>
+            """
+            
+            folium.Marker(
+                location=[row['lat'], row['lon']],
+                popup=folium.Popup(popup_html, max_width=300),
+                icon=folium.Icon(color=color, icon=icon, prefix='fa'),
+                tooltip=f"{row['asset']} - {row['Quantum_Risk']}"
+            ).add_to(marker_cluster)
+            
+            # Add to heatmap data with risk-based intensity
+            intensity = row['Risk_Score'] / 100
+            heat_data.append([row['lat'], row['lon'], intensity])
+    
+    # Add heatmap layer
+    if heat_data:
+        HeatMap(heat_data, radius=15, blur=25, max_zoom=13).add_to(m)
+    
+    folium_static(m, width=1200, height=450)
+    
+    # Tabbed Intelligence Display
+    st.markdown("---")
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "⚛️ Quantum & NIS2 Intelligence",
+        "💡 Remediation Solutions",
+        "📊 Risk Analytics",
+        "📥 Export & Reporting"
+    ])
+    
+    with tab1:
+        st.subheader("Asset Intelligence Matrix")
+        
+        # Display dataframe with custom formatting
+        display_df = df[[
+            'asset', 'ip', 'country', 'city', 
+            'Quantum_Risk', 'Risk_Score', 'PQC_Migration', 'ssl_valid'
+        ]].copy()
+        
+        display_df.columns = [
+            'Asset', 'IP Address', 'Country', 'City',
+            'Quantum Risk', 'Risk Score', 'PQC Strategy', 'SSL Valid'
+        ]
+        
+        st.dataframe(
+            display_df,
+            use_container_width=True,
+            height=400,
+            hide_index=True
+        )
+        
+        # JSON export option
+        if st.checkbox("🔍 Show Raw JSON Data"):
+            st.json(df.to_dict(orient='records'))
+    
+    with tab2:
+        st.subheader("Prioritized Action Plan")
+        
+        # Group by risk level
+        critical_assets = df[df['Quantum_Risk'].str.contains('Critical', na=False)]
+        high_assets = df[df['Quantum_Risk'].str.contains('High', na=False)]
+        moderate_assets = df[~df['Quantum_Risk'].str.contains('Critical|High', na=False)]
+        
+        if not critical_assets.empty:
+            st.error("🚨 **CRITICAL PRIORITY** - Immediate Action Required")
+            for _, row in critical_assets.iterrows():
+                with st.expander(f"🔴 {row['asset']} - Risk Score: {row['Risk_Score']}/100"):
+                    st.markdown(f"""
+                    **Location:** {row['city']}, {row['country']}  
+                    **IP:** {row['ip']}  
+                    **Current Status:** {row['Quantum_Risk']}  
+                    **Required Action:** {row['Solution']}  
+                    **PQC Migration Path:** {row['PQC_Migration']}  
+                    **Timeline:** Immediate (0-7 days)
+                    """)
+        
+        if not high_assets.empty:
+            st.warning("⚠️ **HIGH PRIORITY** - Schedule Within 30 Days")
+            for _, row in high_assets.iterrows():
+                with st.expander(f"🟠 {row['asset']} - Risk Score: {row['Risk_Score']}/100"):
+                    st.markdown(f"""
+                    **Location:** {row['city']}, {row['country']}  
+                    **Action:** {row['Solution']}  
+                    **Timeline:** 30 days
+                    """)
+        
+        if not moderate_assets.empty:
+            st.success("✅ **STANDARD MONITORING** - Quarterly Review")
+            st.caption(f"{len(moderate_assets)} assets under standard security posture")
+    
+    with tab3:
+        st.subheader("Risk Distribution Analytics")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Risk level distribution
+            risk_counts = df['Quantum_Risk'].value_counts()
+            st.bar_chart(risk_counts)
+            st.caption("Risk Level Distribution")
+        
+        with col2:
+            # Geographic distribution
+            geo_counts = df['country'].value_counts().head(10)
+            st.bar_chart(geo_counts)
+            st.caption("Top 10 Countries by Asset Count")
+        
+        # Risk score histogram
+        st.subheader("Risk Score Distribution")
+        st.bar_chart(df['Risk_Score'].value_counts().sort_index())
+    
+    with tab4:
+        st.subheader("Generate Executive Report")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # PDF Report
+            st.markdown("### 📄 PDF Security Audit")
+            st.markdown("""
+            Comprehensive report including:
+            - Executive summary
+            - Asset intelligence matrix
+            - Risk prioritization
+            - Remediation roadmap
+            """)
+            
+            pdf_bytes = generate_pdf_report(df, target)
+            st.download_button(
+                "📥 Download PDF Report",
+                data=pdf_bytes,
+                file_name=f"ProSec_Sentinel_Audit_{target}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+        
+        with col2:
+            # CSV Export
+            st.markdown("### 📊 CSV Data Export")
+            st.markdown("""
+            Raw data for further analysis:
+            - Import to SIEM platforms
+            - Custom analytics
+            - Compliance documentation
+            """)
+            
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                "📥 Download CSV Data",
+                data=csv,
+                file_name=f"Sentinel_Audit_{target}_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        
+        # JSON Export
+        st.markdown("### 🔗 API Integration")
+        json_data = df.to_json(orient='records', indent=2)
+        st.download_button(
+            "📥 Download JSON (API Format)",
+            data=json_data,
+            file_name=f"Sentinel_Audit_{target}_{datetime.now().strftime('%Y%m%d')}.json",
+            mime="application/json",
+            use_container_width=True
+        )
+
+# Footer
+st.markdown("---")
+st.caption("🛡️ Sentinel-V by ProSec Networks | Powered by Quantum-Ready AI | NIS2 Article 21 Compliant")
