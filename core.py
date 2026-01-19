@@ -38,3 +38,22 @@ class SentinelAgent:
             {"Component": "Pandas", "Version": "2.2.0", "License": "BSD-3", "Risk": "✅ Clean"},
             {"Component": "Streamlit", "Version": "1.30.0", "License": "Apache-2.0", "Risk": "⚠️ Patch Req"},
         ]
+    from fpdf import FPDF
+
+def generate_pdf_report(df, target):
+    """Generates a professional PDF audit summary."""
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(200, 10, txt=f"Sentinel-V: Quantum Audit Report - {target}", ln=True, align='C')
+    pdf.ln(10)
+    
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="NIS2 Compliance & Quantum Longevity Summary:", ln=True)
+    pdf.ln(5)
+    
+    for index, row in df.iterrows():
+        text = f"Asset: {row['asset']} | Status: {row['Quantum_Risk']} | Forecast: {row['Exploit_Forecast']}"
+        pdf.multi_cell(0, 10, txt=text)
+    
+    return pdf.output(dest='S').encode('latin-1')

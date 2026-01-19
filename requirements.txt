@@ -1,4 +1,4 @@
-streamlit
-pandas
-aiohttp
 fpdf
+folium
+streamlit-folium
+plotly

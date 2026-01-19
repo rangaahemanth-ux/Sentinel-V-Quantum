@@ -1,49 +1,43 @@
 import streamlit as st
-import asyncio
 import pandas as pd
-from core import SentinelAgent # This must match the class in core.py
+import folium
+from streamlit_folium import st_folium
+from core import SentinelAgent, generate_pdf_report
 
-st.set_page_config(page_title="Sentinel-V Quantum AI", layout="wide", page_icon="🪷")
+# ... (Previous imports and st.set_page_config remain) ...
 
-if 'audit_data' not in st.session_state:
-    st.session_state.audit_data = None
-
-# --- Personal Greeting & Branding ---
+# 1. Global Metrics
 st.write("# Hi Lindsay! 🪷🌸🌷🌻")
 st.title("🛡️ Sentinel-V: Quantum AI Nerve Center")
-st.markdown("---")
 
-target = st.text_input("Enter Strategic Domain", "prosec-networks.com")
+# 2. Add a Sidebar for "All-in-One" Controls
+st.sidebar.header("Command Center")
+target = st.sidebar.text_input("Target Domain", "prosec-networks.com")
+if st.sidebar.button("Run Global Scan 🌍"):
+    # (Existing scan logic goes here)
+    st.session_state.ready = True
 
-if st.button("Initialize Agentic Defense 🚀"):
-    agent = SentinelAgent(target)
-    with st.spinner("Agentic Observer patrolling attack surface... 🪷"):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        results = loop.run_until_complete(agent.autonomous_patrol())
-        
-        st.session_state.audit_data = pd.DataFrame(results)
-        st.session_state.sbom = agent.generate_sbom()
+# 3. Interactive Threat Map
+st.subheader("🌐 Global Adversarial Radar")
+m = folium.Map(location=[20, 0], zoom_start=2)
+# Adding dummy threat markers for visual impact
+folium.Marker([48.8566, 2.3522], popup="Shadow IT Found (Paris)").add_to(m)
+folium.Marker([40.7128, -74.0060], popup="HNDL Risk Detected (NY)").add_to(m)
+st_folium(m, height=350, width=1000)
 
-# --- Display Results ---
+# 4. Results & Download
 if st.session_state.audit_data is not None:
-    # 2026 Executive Metrics
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Quantum Attack Window", "3 Years", "-12mo Acceleration")
-    c2.metric("NIS2 Compliance", "✅ Verified", "Article 21 Mode")
-    c3.metric("Agent Status", "Patrolling", "🪷 Healthy Garden")
-
-    tab1, tab2, tab3 = st.tabs(["Quantum Readiness ⚛️", "Predictive Forecast 🔮", "Supply Chain (SBOM) 📦"])
+    tab1, tab2, tab3 = st.tabs(["Quantum Analytics", "Supply Chain", "Export Report"])
     
     with tab1:
-        st.dataframe(st.session_state.audit_data[['asset', 'Quantum_Risk', 'PQC_Migration']], use_container_width=True)
-
-    with tab2:
-        st.warning("Forecasting assumes AI-accelerated zero-day discovery.")
-        st.dataframe(st.session_state.audit_data[['asset', 'Exploit_Forecast']], use_container_width=True)
-
+        st.dataframe(st.session_state.audit_data, use_container_width=True)
+    
     with tab3:
-        st.info("Software Bill of Materials for Regulatory Transparency.")
-        st.table(st.session_state.sbom)
-else:
-    st.info("Initialize the Sentinel Agent to bloom your defense. 🌼")
+        st.write("### Prepare Board-Ready Deliverables")
+        pdf_bytes = generate_pdf_report(st.session_state.audit_data, target)
+        st.download_button(
+            label="Download PDF Security Audit 📥",
+            data=pdf_bytes,
+            file_name=f"SentinelV_Audit_{target}.pdf",
+            mime="application/pdf"
+        )
