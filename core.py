@@ -9,7 +9,7 @@ class SentinelAgent:
         self.domain = domain
 
     async def run_recon(self):
-        """Asynchronous discovery of high-value assets."""
+        """Asynchronous discovery of assets."""
         url = f"https://crt.sh/?q={self.domain}&output=json"
         async with aiohttp.ClientSession() as session:
             try:
@@ -42,7 +42,7 @@ class SentinelAgent:
         ]
 
 def generate_pdf_report(df, target):
-    """Generates a professional PDF audit summary with Unicode safety."""
+    """Generates a professional PDF audit summary with Latin-1 safety."""
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", 'B', 16)

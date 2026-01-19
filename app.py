@@ -1,44 +1,41 @@
 import streamlit as st
 import asyncio
 import pandas as pd
-from core import SentinelAgent, generate_pdf_report
+from core import SentinelAgent, generate_pdf_report # Fixed import for live site
 
-# 1. Initialize Global Config
-st.set_page_config(page_title="Sentinel-V Quantum AI", layout="wide", page_icon="🪷")
+# 1. Page Config & Professional Branding
+st.set_page_config(page_title="Sentinel-V Quantum AI", layout="wide", page_icon="🛡️")
 
-# Fix AttributeError: Ensure keys exist before they are accessed
+# Fix AttributeError: Ensure keys exist before accessing
 if 'audit_data' not in st.session_state:
     st.session_state.audit_data = None
 if 'sbom' not in st.session_state:
     st.session_state.sbom = None
 
-# 2. Branding & Personal Touch
-st.write("# Hi Lindsay! 🪷🌸🌷🌻")
 st.title("🛡️ Sentinel-V: Quantum AI Nerve Center")
 st.markdown("---")
 
-# 3. Execution Sidebar
+# 2. Command Sidebar
 with st.sidebar:
     st.header("Jarvis Command")
     target = st.text_input("Strategic Domain", "prosec-networks.com")
     if st.button("Initialize Agentic Defense 🚀"):
         agent = SentinelAgent(target)
-        with st.spinner("Agentic Observer patrolling attack surface... 🪷"):
+        with st.spinner("Agentic Observer patrolling attack surface..."):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             assets = loop.run_until_complete(agent.run_recon())
             results = [agent.get_pqc_readiness(a) for a in assets]
             
-            # Update state after processing
             st.session_state.audit_data = pd.DataFrame(results)
             st.session_state.sbom = agent.generate_sbom()
 
-# 4. Display Result Tabs
+# 3. Display Result Tabs
 if st.session_state.audit_data is not None:
     c1, c2, c3 = st.columns(3)
     c1.metric("Q-Day Readiness", "42%", "-12% Risk")
     c2.metric("NIS2 Compliance", "Verified", "Article 21")
-    c3.metric("Agent Status", "Patrolling", "🪷 Healthy")
+    c3.metric("Agent Status", "Active", "Healthy")
 
     tab1, tab2, tab3 = st.tabs(["Quantum Readiness ⚛️", "Predictive Forecast 🔮", "Export & SBOM 📦"])
     
@@ -56,4 +53,4 @@ if st.session_state.audit_data is not None:
         pdf_bytes = generate_pdf_report(st.session_state.audit_data, target)
         st.download_button("Download PDF Security Audit 📥", data=pdf_bytes, file_name="Audit.pdf", mime="application/pdf")
 else:
-    st.info("Initialize the Sentinel Agent to bloom your defense. 🌼")
+    st.info("Initialize the Sentinel Agent to begin the boardroom audit.")
