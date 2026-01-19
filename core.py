@@ -9,7 +9,7 @@ class SentinelAgent:
         self.domain = domain
 
     async def run_recon(self):
-        """Asynchronous discovery of high-value assets."""
+        """Asynchronous asset discovery."""
         url = f"https://crt.sh/?q={self.domain}&output=json"
         async with aiohttp.ClientSession() as session:
             try:
@@ -43,7 +43,7 @@ class SentinelAgent:
         ]
 
 def generate_pdf_report(df, target):
-    """Generates a professional PDF with Latin-1 safety."""
+    """Generates professional PDF with Latin-1 safety to prevent Unicode errors."""
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", 'B', 16)
@@ -52,8 +52,8 @@ def generate_pdf_report(df, target):
     pdf.set_font("Arial", size=12)
     
     for index, row in df.iterrows():
-        # Sanitize text for PDF encoding to prevent UnicodeEncodeError
-        line = f"Asset: {row['asset']} | Risk: {row['Quantum_Status']} | Strategy: {row['PQC_Migration']}"
+        # Sanitize text to prevent UnicodeEncodeError
+        line = f"Asset: {row['asset']} | Risk: {row['Quantum_Risk']} | Strategy: {row['PQC_Migration']}"
         clean_line = line.encode('latin-1', 'replace').decode('latin-1') 
         pdf.multi_cell(0, 10, txt=clean_line)
     

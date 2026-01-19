@@ -2,6 +2,5 @@ streamlit
 pandas
 aiohttp
 fpdf
-networkx
-streamlit-folium
 folium
+streamlit-folium
