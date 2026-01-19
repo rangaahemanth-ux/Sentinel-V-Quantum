@@ -3,19 +3,25 @@ import asyncio
 import pandas as pd
 from core import Scanner
 
-st.set_page_config(page_title="Sentinel-V Quantum Edition", layout="wide")
+# --- 1. SETTINGS & STYLING ---
+st.set_page_config(page_title="Sentinel-V | Quantum Garden", layout="wide")
 
 # Persistent memory
 if 'audit_data' not in st.session_state:
     st.session_state.audit_data = None
 
+# --- 2. PERSONAL GREETING & FLOWERS ---
+st.write("# Hi Lindsay! 👋 🌸🌷🌻")
 st.title("🛡️ Sentinel-V: Quantum & NIS2 Compliance")
+st.markdown("---")
 
+# --- 3. INPUT & ENGINE ---
 target = st.text_input("Enter Company Domain", "prosec-networks.com")
 
-if st.button("Initialize Deep-Scan"):
+if st.button("Initialize Deep-Scan 🚀"):
     scanner = Scanner(target)
-    with st.spinner("Analyzing Attack Surface & Quantum Longevity..."):
+    with st.spinner("Analyzing Attack Surface & Planting Digital Flowers... 🌿"):
+        # Run async discovery
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         assets = loop.run_until_complete(scanner.get_subdomains())
@@ -29,19 +35,19 @@ if st.button("Initialize Deep-Scan"):
         df_q = pd.DataFrame(q_res)
         st.session_state.audit_data = pd.merge(df_c, df_q, on="asset")
 
-# Display Results from Session State
+# --- 4. DISPLAY RESULTS ---
 if st.session_state.audit_data is not None:
     df = st.session_state.audit_data
     
-    tab1, tab2 = st.tabs(["Classical NIS2 Risk", "Quantum Readiness (HNDL)"])
+    tab1, tab2 = st.tabs(["Classical NIS2 Risk 🏢", "Quantum Readiness (HNDL) ⚛️"])
     
     with tab1:
-        avg_c = df['Classical_Risk'].mean() # This key must match core.py
-        st.metric("Overall Classical Risk", f"{avg_c:.1f}%")
+        avg_c = df['Classical_Risk'].mean() 
+        st.metric("Overall Classical Risk", f"{avg_c:.1f}%", delta="🌸 Healthy Garden")
         st.dataframe(df[['asset', 'Classical_Risk', 'status', 'risks']], use_container_width=True)
 
     with tab2:
         st.warning("Adversaries may harvest this data today for future decryption.")
         st.dataframe(df[['asset', 'Quantum_Risk', 'Quantum_Status', 'Recommendation']], use_container_width=True)
 else:
-    st.info("Enter a domain to begin the audit.")
+    st.info("Enter a domain and click 'Initialize Deep-Scan' to bloom. 🌼")
