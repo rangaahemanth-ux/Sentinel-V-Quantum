@@ -11,7 +11,7 @@ if 'audit_data' not in st.session_state:
     st.session_state.audit_data = None
 
 # --- 2. PERSONAL GREETING & FLOWERS ---
-st.write("# Hi Lindsay! 👋 🌸🌷🌻")
+st.write("# Hi Lindsay!🌻")
 st.title("🛡️ Sentinel-V: Quantum & NIS2 Compliance")
 st.markdown("---")
 
