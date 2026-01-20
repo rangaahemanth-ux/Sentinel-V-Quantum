@@ -1,6 +1,6 @@
 """
 Sentinel-V Intelligence Engine with Quantum Threat Analysis
-Complete core module for autonomous reconnaissance and quantum risk assessment
+Complete core module with SCAN MODE SUPPORT
 """
 
 import asyncio
@@ -11,8 +11,65 @@ from fpdf import FPDF
 from datetime import datetime
 import ssl
 import certifi
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional
 import hashlib
+import random
+
+
+class ScanMode:
+    """Scan mode configurations"""
+    
+    STANDARD = "Standard Recon"
+    DEEP_QUANTUM = "Deep Quantum Analysis"
+    STEALTH = "Stealth Mode"
+    COMPREHENSIVE = "Comprehensive Audit"
+    
+    @staticmethod
+    def get_config(mode: str) -> Dict:
+        """Get configuration for each scan mode"""
+        configs = {
+            "Standard Recon": {
+                "max_assets": 10,
+                "enable_quantum": False,
+                "enable_ssl_check": True,
+                "enable_geo": True,
+                "delay_between_requests": 0,
+                "subdomain_sources": ["common"],
+                "description": "Fast reconnaissance - basic asset discovery",
+                "timeout": 10
+            },
+            "Deep Quantum Analysis": {
+                "max_assets": 25,
+                "enable_quantum": True,
+                "enable_ssl_check": True,
+                "enable_geo": True,
+                "delay_between_requests": 0.5,
+                "subdomain_sources": ["crt.sh", "common"],
+                "description": "Full quantum threat assessment with PQC recommendations",
+                "timeout": 30
+            },
+            "Stealth Mode": {
+                "max_assets": 15,
+                "enable_quantum": True,
+                "enable_ssl_check": True,
+                "enable_geo": True,
+                "delay_between_requests": 3,  # Slow to avoid detection
+                "subdomain_sources": ["common"],  # Passive only
+                "description": "Low-profile scan with delays to avoid detection",
+                "timeout": 20
+            },
+            "Comprehensive Audit": {
+                "max_assets": 50,
+                "enable_quantum": True,
+                "enable_ssl_check": True,
+                "enable_geo": True,
+                "delay_between_requests": 0.25,
+                "subdomain_sources": ["crt.sh", "common", "extended"],
+                "description": "Full audit - recon + quantum + compliance + ISMS",
+                "timeout": 45
+            }
+        }
+        return configs.get(mode, configs["Standard Recon"])
 
 
 class QuantumThreatAnalyzer:
@@ -57,7 +114,6 @@ class QuantumThreatAnalyzer:
             }
         }
         
-        # Determine crypto type from key size hints
         if key_size >= 1024:
             crypto_category = 'RSA'
         else:
@@ -66,7 +122,6 @@ class QuantumThreatAnalyzer:
         threat_info = vulnerability_map.get(crypto_category, vulnerability_map['RSA'])
         years_until_vulnerable = max(0, threat_info['vulnerability_year'] - current_year)
         
-        # Calculate quantum risk score
         if years_until_vulnerable <= 3:
             risk_score = 95
             urgency = 'IMMEDIATE'
@@ -135,14 +190,16 @@ class QuantumThreatAnalyzer:
 class SentinelAgent:
     """Autonomous reconnaissance agent with quantum threat intelligence"""
     
-    def __init__(self, domain: str):
+    def __init__(self, domain: str, scan_mode: str = "Deep Quantum Analysis"):
         self.domain = domain
         self.session = None
-        self.quantum_analyzer = QuantumThreatAnalyzer()
+        self.scan_mode = scan_mode
+        self.config = ScanMode.get_config(scan_mode)
+        self.quantum_analyzer = QuantumThreatAnalyzer() if self.config['enable_quantum'] else None
         
     async def __aenter__(self):
         """Context manager for proper session handling"""
-        timeout = aiohttp.ClientTimeout(total=30)
+        timeout = aiohttp.ClientTimeout(total=self.config['timeout'])
         connector = aiohttp.TCPConnector(limit=10, limit_per_host=5)
         self.session = aiohttp.ClientSession(timeout=timeout, connector=connector)
         return self
@@ -151,17 +208,23 @@ class SentinelAgent:
         """Cleanup session on exit"""
         if self.session:
             await self.session.close()
-            await asyncio.sleep(0.25)  # Give time for cleanup
+            await asyncio.sleep(0.25)
 
     async def get_geo_data(self, asset: str) -> Dict:
         """Enhanced geolocation with fallback and error handling"""
+        if not self.config['enable_geo']:
+            return self._default_geo()
+            
         try:
-            # Resolve IP with timeout
             loop = asyncio.get_event_loop()
             ip = await asyncio.wait_for(
                 loop.run_in_executor(None, socket.gethostbyname, asset),
                 timeout=5.0
             )
+            
+            # Add stealth delay if configured
+            if self.config['delay_between_requests'] > 0:
+                await asyncio.sleep(self.config['delay_between_requests'])
             
             # Try primary geo API
             try:
@@ -206,8 +269,11 @@ class SentinelAgent:
                 
         except (socket.gaierror, asyncio.TimeoutError, Exception) as e:
             print(f"Geo lookup failed for {asset}: {str(e)}")
-            
-        # Return default values if all attempts fail
+        
+        return self._default_geo()
+    
+    def _default_geo(self) -> Dict:
+        """Return default geo data"""
         return {
             "lat": 0.0,
             "lon": 0.0,
@@ -219,46 +285,73 @@ class SentinelAgent:
         }
 
     async def run_recon(self) -> List[str]:
-        """Enhanced subdomain discovery with multiple sources"""
+        """Enhanced subdomain discovery based on scan mode"""
         discovered_assets = set()
+        sources = self.config['subdomain_sources']
         
-        # Method 1: Certificate Transparency (crt.sh)
-        try:
-            url = f"https://crt.sh/?q=%.{self.domain}&output=json"
-            async with self.session.get(url, timeout=15) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    for entry in data[:100]:  # Increased limit
-                        name = entry.get('name_value', '').lower()
-                        for subdomain in name.split('\n'):
-                            subdomain = subdomain.strip().replace('*.', '')
-                            if subdomain and self.domain in subdomain:
-                                discovered_assets.add(subdomain)
-        except Exception as e:
-            print(f"crt.sh lookup failed: {str(e)}")
+        # Method 1: Certificate Transparency (crt.sh) - if enabled
+        if "crt.sh" in sources:
+            try:
+                if self.config['delay_between_requests'] > 0:
+                    await asyncio.sleep(self.config['delay_between_requests'])
+                    
+                url = f"https://crt.sh/?q=%.{self.domain}&output=json"
+                async with self.session.get(url, timeout=15) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        for entry in data[:100]:
+                            name = entry.get('name_value', '').lower()
+                            for subdomain in name.split('\n'):
+                                subdomain = subdomain.strip().replace('*.', '')
+                                if subdomain and self.domain in subdomain:
+                                    discovered_assets.add(subdomain)
+            except Exception as e:
+                print(f"crt.sh lookup failed: {str(e)}")
         
-        # Method 2: Common subdomains bruteforce
-        common_subdomains = [
-            'www', 'mail', 'remote', 'blog', 'webmail', 'server',
-            'ns1', 'ns2', 'smtp', 'secure', 'vpn', 'api', 'vault',
-            'admin', 'dev', 'staging', 'test', 'portal', 'gateway',
-            'pqc', 'quantum', 'shield', 'sentinel', 'monitor',
-            'auth', 'sso', 'identity', 'iam', 'keys', 'crypto',
-            'internal', 'external', 'public', 'private', 'prod'
-        ]
+        # Method 2: Common subdomains
+        if "common" in sources:
+            common_subdomains = [
+                'www', 'mail', 'remote', 'blog', 'webmail', 'server',
+                'ns1', 'ns2', 'smtp', 'secure', 'vpn', 'api', 'vault',
+                'admin', 'dev', 'staging', 'test', 'portal', 'gateway',
+                'pqc', 'quantum', 'shield', 'sentinel', 'monitor',
+                'auth', 'sso', 'identity', 'iam', 'keys', 'crypto'
+            ]
+            for sub in common_subdomains:
+                discovered_assets.add(f"{sub}.{self.domain}")
         
-        for sub in common_subdomains:
-            discovered_assets.add(f"{sub}.{self.domain}")
+        # Method 3: Extended subdomains (Comprehensive only)
+        if "extended" in sources:
+            extended_subdomains = [
+                'internal', 'external', 'public', 'private', 'prod',
+                'backup', 'db', 'database', 'mysql', 'postgres', 'redis',
+                'elk', 'kibana', 'grafana', 'prometheus', 'jenkins',
+                'gitlab', 'github', 'bitbucket', 'docker', 'k8s',
+                'aws', 'azure', 'gcp', 'cloud', 'cdn', 'static',
+                'img', 'images', 'assets', 'media', 'video', 'files',
+                'app', 'mobile', 'ios', 'android', 'web', 'frontend',
+                'backend', 'api-v1', 'api-v2', 'graphql', 'rest'
+            ]
+            for sub in extended_subdomains:
+                discovered_assets.add(f"{sub}.{self.domain}")
         
-        # Always include the root domain
+        # Always include root domain
         discovered_assets.add(self.domain)
         
-        # Return sorted list, limited to top 20 for demo
-        return sorted(list(discovered_assets))[:20]
+        # Limit based on scan mode
+        max_assets = self.config['max_assets']
+        return sorted(list(discovered_assets))[:max_assets]
 
     async def check_ssl_cert(self, asset: str) -> Dict:
         """Check SSL certificate validity, strength, and quantum readiness"""
+        if not self.config['enable_ssl_check']:
+            return {'valid': False, 'issuer': 'N/A', 'version': 'N/A', 'cipher': 'Unknown', 'quantum_safe': False}
+            
         try:
+            # Add stealth delay if configured
+            if self.config['delay_between_requests'] > 0:
+                await asyncio.sleep(self.config['delay_between_requests'])
+                
             context = ssl.create_default_context(cafile=certifi.where())
             loop = asyncio.get_event_loop()
             
@@ -267,14 +360,8 @@ class SentinelAgent:
                     with context.wrap_socket(sock, server_hostname=asset) as ssock:
                         cert = ssock.getpeercert()
                         cipher = ssock.cipher()
-                        
-                        # Extract certificate details
                         issuer = dict(x[0] for x in cert.get('issuer', []))
-                        
-                        # Determine crypto algorithm from cipher
                         cipher_name = cipher[0] if cipher else 'Unknown'
-                        
-                        # Check if quantum-resistant
                         is_quantum_safe = any(qc in cipher_name.upper() 
                                             for qc in ['CECPQ2', 'KYBER', 'NTRU', 'SIKE'])
                         
@@ -300,20 +387,23 @@ class SentinelAgent:
                 'quantum_safe': False
             }
 
-    async def build_intelligence(self, assets: List[str]) -> pd.DataFrame:
-        """Enhanced intelligence compilation with quantum risk scoring"""
+    async def build_intelligence(self, assets: List[str], progress_callback=None) -> pd.DataFrame:
+        """Enhanced intelligence compilation with progress tracking"""
         results = []
-        tasks = []
+        total = len(assets)
         
-        # Gather all data concurrently
-        for asset in assets:
-            tasks.append(self._analyze_asset(asset))
-        
-        analyzed = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        for data in analyzed:
-            if isinstance(data, dict):
-                results.append(data)
+        for idx, asset in enumerate(assets):
+            try:
+                data = await self._analyze_asset(asset)
+                if isinstance(data, dict):
+                    results.append(data)
+                    
+                # Progress callback
+                if progress_callback:
+                    progress_callback(idx + 1, total, asset)
+                    
+            except Exception as e:
+                print(f"Error analyzing {asset}: {e}")
         
         return pd.DataFrame(results)
     
@@ -326,10 +416,9 @@ class SentinelAgent:
         ssl_data = await self.check_ssl_cert(asset)
         
         # Determine criticality based on naming patterns
-        critical_keywords = ["vault", "api", "pqc", "secure", "admin", "gateway", "quantum", "keys", "auth", "iam"]
+        critical_keywords = ["vault", "api", "pqc", "secure", "admin", "gateway", "quantum", "keys", "auth", "iam", "sso", "identity"]
         is_critical = any(keyword in asset.lower() for keyword in critical_keywords)
         
-        # Determine asset criticality level
         if is_critical:
             criticality = 'CRITICAL'
         elif any(k in asset.lower() for k in ['dev', 'test', 'staging']):
@@ -337,10 +426,24 @@ class SentinelAgent:
         else:
             criticality = 'HIGH'
         
-        # Quantum threat assessment
-        # Assume RSA-2048 for most assets (simulated - in reality would probe)
-        crypto_assessment = self.quantum_analyzer.assess_crypto_vulnerability('RSA', 2048)
-        pqc_recommendation = self.quantum_analyzer.recommend_pqc_algorithm(asset, criticality)
+        # Quantum threat assessment (if enabled)
+        if self.quantum_analyzer:
+            crypto_assessment = self.quantum_analyzer.assess_crypto_vulnerability('RSA', 2048)
+            pqc_recommendation = self.quantum_analyzer.recommend_pqc_algorithm(asset, criticality)
+        else:
+            # Basic assessment without quantum analysis
+            crypto_assessment = {
+                'threat_algorithm': 'N/A',
+                'years_until_vulnerable': 10,
+                'urgency': 'MONITOR',
+                'quantum_risk_score': 30
+            }
+            pqc_recommendation = {
+                'recommended_kem': 'N/A',
+                'recommended_signature': 'N/A',
+                'migration_priority': 'N/A',
+                'timeline': 'N/A'
+            }
         
         # Calculate comprehensive risk score (0-100)
         risk_score = 0
@@ -359,8 +462,9 @@ class SentinelAgent:
         elif not ssl_data.get('quantum_safe', False):
             risk_score += 15
         
-        # Factor 3: Quantum vulnerability (30 points max)
-        risk_score += min(30, crypto_assessment['quantum_risk_score'] // 3)
+        # Factor 3: Quantum vulnerability (30 points max) - only if quantum enabled
+        if self.config['enable_quantum']:
+            risk_score += min(30, crypto_assessment['quantum_risk_score'] // 3)
         
         # Factor 4: Geolocation unknown (10 points)
         if geo_data['country'] == 'Unknown':
@@ -380,13 +484,13 @@ class SentinelAgent:
             risk_level = "Low"
             color = "blue"
         
-        # Generate comprehensive solution
+        # Generate solution
         solution_parts = []
-        if crypto_assessment['urgency'] == 'IMMEDIATE' or crypto_assessment['urgency'] == 'URGENT':
+        if self.config['enable_quantum'] and (crypto_assessment['urgency'] == 'IMMEDIATE' or crypto_assessment['urgency'] == 'URGENT'):
             solution_parts.append(f"QUANTUM THREAT: Migrate to {pqc_recommendation['recommended_kem']}")
         if not ssl_data.get('valid', False):
             solution_parts.append("Deploy valid SSL/TLS certificate")
-        if not ssl_data.get('quantum_safe', False):
+        if self.config['enable_quantum'] and not ssl_data.get('quantum_safe', False):
             solution_parts.append("Enable hybrid classical-PQC mode")
         
         if not solution_parts:
@@ -394,7 +498,7 @@ class SentinelAgent:
         
         solution = " | ".join(solution_parts)
         
-        # Generate asset fingerprint for tracking
+        # Generate asset fingerprint
         asset_hash = hashlib.sha256(asset.encode()).hexdigest()[:12]
         
         return {
@@ -424,18 +528,19 @@ class SentinelAgent:
             "Solution": solution,
             "color": color,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "harvest_now_threat": crypto_assessment['years_until_vulnerable'] <= 10
+            "harvest_now_threat": crypto_assessment['years_until_vulnerable'] <= 10,
+            "scan_mode": self.scan_mode
         }
 
 
-def generate_pdf_report(df: pd.DataFrame, target: str) -> bytes:
+def generate_pdf_report(df: pd.DataFrame, target: str, scan_mode: str = "Deep Quantum Analysis") -> bytes:
     """Enhanced PDF generation with quantum threat intelligence"""
     pdf = FPDF()
     pdf.add_page()
     
     # Header with branding
     pdf.set_font("Arial", 'B', 24)
-    pdf.set_text_color(102, 51, 153)  # Purple quantum theme
+    pdf.set_text_color(102, 51, 153)
     pdf.cell(0, 15, txt="SENTINEL-V QUANTUM SECURITY AUDIT", ln=True, align='C')
     
     pdf.set_font("Arial", 'B', 16)
@@ -444,6 +549,7 @@ def generate_pdf_report(df: pd.DataFrame, target: str) -> bytes:
     
     pdf.set_font("Arial", '', 10)
     pdf.cell(0, 8, txt=f"Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}", ln=True, align='C')
+    pdf.cell(0, 6, txt=f"Scan Mode: {scan_mode}", ln=True, align='C')
     pdf.cell(0, 6, txt="ProSec Networks | Quantum-Ready Cybersecurity", ln=True, align='C')
     pdf.ln(8)
     
@@ -461,11 +567,11 @@ def generate_pdf_report(df: pd.DataFrame, target: str) -> bytes:
     harvest_threat = len(df[df['harvest_now_threat'] == True])
     
     summary_text = f"""
-Sentinel-V conducted a comprehensive quantum threat assessment of {total_assets} assets.
+Sentinel-V conducted a {scan_mode} assessment of {total_assets} assets.
     
 THREAT LANDSCAPE:
 - {critical_count} assets identified as CRITICAL risk requiring immediate action
-- {high_count} assets with HIGH quantum vulnerability (RSA/ECC exposed to Shor's algorithm)
+- {high_count} assets with HIGH quantum vulnerability
 - {quantum_vulnerable} assets will be vulnerable to quantum attacks within 5 years
 - {harvest_threat} assets subject to "Harvest Now, Decrypt Later" threat
 
@@ -473,39 +579,9 @@ QUANTUM READINESS:
 - Current encryption: RSA-2048/ECC-256 (quantum-vulnerable by 2030)
 - Recommended migration: ML-KEM post-quantum cryptography (NIST FIPS 203)
 - Estimated timeline: Immediate action required for critical assets
-
-NIS2 COMPLIANCE STATUS: Partial - Requires PQC migration for full compliance
     """
     
     pdf.multi_cell(0, 5, txt=summary_text.encode('latin-1', 'replace').decode('latin-1'))
-    pdf.ln(5)
-    
-    # Quantum Threat Analysis Section
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 14)
-    pdf.set_text_color(102, 51, 153)
-    pdf.cell(0, 10, txt="QUANTUM THREAT INTELLIGENCE", ln=True)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Arial", '', 10)
-    
-    quantum_info = """
-UNDERSTANDING THE QUANTUM THREAT:
-
-Shor's Algorithm: Breaks RSA and ECC exponentially faster than classical computers.
-A quantum computer with 4000 logical qubits could break RSA-2048 in approximately 8 hours.
-
-Timeline Projection:
-- 2024-2026: NISQ (Noisy Intermediate-Scale Quantum) - Research phase
-- 2027-2029: Early fault-tolerant quantum computers emerge
-- 2030-2032: Cryptographically Relevant Quantum Computers (CRQC) threaten current encryption
-- 2033+: Universal quantum computers make classical public-key crypto obsolete
-
-"Harvest Now, Decrypt Later" Threat:
-Adversaries are collecting encrypted data TODAY to decrypt when quantum computers arrive.
-Long-lived sensitive data requires IMMEDIATE migration to post-quantum cryptography.
-    """
-    
-    pdf.multi_cell(0, 5, txt=quantum_info.encode('latin-1', 'replace').decode('latin-1'))
     pdf.ln(5)
     
     # Asset Intelligence Report
@@ -517,70 +593,28 @@ Long-lived sensitive data requires IMMEDIATE migration to post-quantum cryptogra
     pdf.set_font("Arial", '', 9)
     
     for idx, row in df.iterrows():
-        # Asset header with risk indicator
         pdf.set_font("Arial", 'B', 11)
-        risk_indicator = "🔴" if "Critical" in row['Quantum_Risk'] else "🟠" if "High" in row['Quantum_Risk'] else "🟡"
-        asset_line = f"{idx + 1}. {row['asset']} {risk_indicator}"
+        risk_indicator = "[!]" if "Critical" in row['Quantum_Risk'] else "[*]" if "High" in row['Quantum_Risk'] else "[-]"
+        asset_line = f"{idx + 1}. {risk_indicator} {row['asset']}"
         pdf.cell(0, 7, txt=asset_line.encode('latin-1', 'replace').decode('latin-1'), ln=True)
         
         pdf.set_font("Arial", '', 9)
         
-        # Core details
         details = [
-            f"   IP: {row['ip']} | Location: {row['city']}, {row['country']} | ISP: {row['isp'][:30]}",
-            f"   Risk Score: {row['Risk_Score']}/100 | Level: {row['Quantum_Risk']} | Criticality: {row['criticality']}",
-            f"   SSL: {row['ssl_version']} | Cipher: {row['ssl_cipher'][:30]} | Quantum-Safe: {'Yes' if row['quantum_safe_crypto'] else 'No'}",
-            f"   Quantum Threat: {row['quantum_threat_algorithm']} algorithm | Vulnerable in {row['quantum_years_vulnerable']} years",
-            f"   PQC Strategy: {row['PQC_Migration']} | Signature: {row['PQC_Signature']} | Priority: {row['PQC_Priority']}",
-            f"   Timeline: {row['PQC_Timeline']} | Harvest Threat: {'ACTIVE' if row['harvest_now_threat'] else 'Low'}",
-            f"   ACTIONS REQUIRED: {row['Solution'][:90]}..."
+            f"   IP: {row['ip']} | Location: {row['city']}, {row['country']}",
+            f"   Risk Score: {row['Risk_Score']}/100 | Level: {row['Quantum_Risk']}",
+            f"   SSL: {row['ssl_version']} | Quantum-Safe: {'Yes' if row['quantum_safe_crypto'] else 'No'}",
+            f"   PQC Strategy: {row['PQC_Migration']} | Priority: {row['PQC_Priority']}",
+            f"   ACTION: {row['Solution'][:80]}..."
         ]
         
         for detail in details:
             pdf.multi_cell(0, 4, txt=detail.encode('latin-1', 'replace').decode('latin-1'))
         
-        pdf.ln(4)
+        pdf.ln(3)
         
-        # Page break every 3 assets
-        if (idx + 1) % 3 == 0 and idx < len(df) - 1:
+        if (idx + 1) % 4 == 0 and idx < len(df) - 1:
             pdf.add_page()
-    
-    # Recommendations Page
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 14)
-    pdf.set_text_color(102, 51, 153)
-    pdf.cell(0, 10, txt="POST-QUANTUM MIGRATION ROADMAP", ln=True)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Arial", '', 10)
-    
-    roadmap = """
-PHASE 1: IMMEDIATE (0-3 MONTHS)
-- Migrate CRITICAL assets to ML-KEM-768 or ML-KEM-1024
-- Implement hybrid classical-PQC mode for backwards compatibility
-- Begin inventory of all cryptographic assets and dependencies
-
-PHASE 2: NEAR-TERM (3-6 MONTHS)  
-- Deploy ML-DSA digital signatures for authentication systems
-- Update SSL/TLS configurations with post-quantum cipher suites
-- Conduct penetration testing of PQC implementations
-
-PHASE 3: MEDIUM-TERM (6-12 MONTHS)
-- Complete migration of HIGH priority assets
-- Implement quantum-safe key management infrastructure
-- Train security team on PQC best practices
-
-PHASE 4: LONG-TERM (12-24 MONTHS)
-- Full organizational PQC adoption
-- Continuous monitoring of quantum computing advances
-- Regular cryptographic agility assessments
-
-NIST STANDARDS COMPLIANCE:
-- FIPS 203: ML-KEM (Key Encapsulation Mechanism)
-- FIPS 204: ML-DSA (Digital Signature Algorithm)
-- FIPS 205: SLH-DSA (Stateless Hash-Based Signatures)
-    """
-    
-    pdf.multi_cell(0, 5, txt=roadmap.encode('latin-1', 'replace').decode('latin-1'))
     
     # Footer
     pdf.ln(8)
@@ -592,9 +626,9 @@ NIST STANDARDS COMPLIANCE:
     return pdf.output(dest='S').encode('latin-1')
 
 
-async def run_audit(domain: str) -> pd.DataFrame:
-    """Main audit orchestrator with proper session management"""
-    async with SentinelAgent(domain) as agent:
+async def run_audit(domain: str, scan_mode: str = "Deep Quantum Analysis", progress_callback=None) -> pd.DataFrame:
+    """Main audit orchestrator with scan mode support"""
+    async with SentinelAgent(domain, scan_mode) as agent:
         assets = await agent.run_recon()
-        intelligence_df = await agent.build_intelligence(assets)
+        intelligence_df = await agent.build_intelligence(assets, progress_callback)
         return intelligence_df

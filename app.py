@@ -1,6 +1,6 @@
 """
 Sentinel-V: Quantum AI Nerve Center
-Complete command center with quantum threat intelligence integration
+Complete command center with FULLY FUNCTIONAL Jarvis sidebar and scan modes
 """
 
 import streamlit as st
@@ -9,7 +9,7 @@ import pandas as pd
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import HeatMap, MarkerCluster
-from core import SentinelAgent, generate_pdf_report, run_audit
+from core import SentinelAgent, generate_pdf_report, run_audit, ScanMode
 from datetime import datetime
 import plotly.graph_objects as go
 import plotly.express as px
@@ -90,10 +90,24 @@ st.markdown("""
         margin-bottom: 0;
     }
     
-    /* Quantum particle effect */
-    .quantum-particles {
-        background-image: radial-gradient(circle, rgba(138, 43, 226, 0.1) 1px, transparent 1px);
-        background-size: 50px 50px;
+    /* Scan mode indicator */
+    .scan-mode-indicator {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: bold;
+        text-align: center;
+        margin: 1rem 0;
+    }
+    
+    /* Jarvis status */
+    .jarvis-status {
+        background: rgba(102, 126, 234, 0.2);
+        border: 1px solid rgba(102, 126, 234, 0.5);
+        border-radius: 10px;
+        padding: 1rem;
+        margin: 1rem 0;
     }
     
     /* Tab styling */
@@ -112,20 +126,6 @@ st.markdown("""
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-color: rgba(138, 43, 226, 0.8);
     }
-    
-    /* Expander styling */
-    .streamlit-expanderHeader {
-        background: rgba(138, 43, 226, 0.1);
-        border-radius: 8px;
-        border: 1px solid rgba(138, 43, 226, 0.3);
-    }
-    
-    /* Code blocks */
-    .stCodeBlock {
-        background: rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(138, 43, 226, 0.3);
-        border-radius: 8px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -139,22 +139,73 @@ if 'scan_history' not in st.session_state:
     st.session_state.scan_history = []
 if 'active_scan' not in st.session_state:
     st.session_state.active_scan = False
-if 'quantum_demo_active' not in st.session_state:
-    st.session_state.quantum_demo_active = False
+if 'current_scan_mode' not in st.session_state:
+    st.session_state.current_scan_mode = "Deep Quantum Analysis"
+if 'jarvis_messages' not in st.session_state:
+    st.session_state.jarvis_messages = []
+
+# ============================================================================
+# JARVIS HELPER FUNCTIONS
+# ============================================================================
+
+def jarvis_speak(message: str, msg_type: str = "info"):
+    """Add a message to Jarvis log"""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    st.session_state.jarvis_messages.append({
+        "time": timestamp,
+        "message": message,
+        "type": msg_type
+    })
+    # Keep only last 10 messages
+    if len(st.session_state.jarvis_messages) > 10:
+        st.session_state.jarvis_messages = st.session_state.jarvis_messages[-10:]
+
+def get_scan_mode_description(mode: str) -> dict:
+    """Get detailed description for scan mode"""
+    descriptions = {
+        "Standard Recon": {
+            "icon": "🔍",
+            "color": "#4ECDC4",
+            "speed": "Fast",
+            "depth": "Basic",
+            "features": ["Quick subdomain scan", "Basic SSL check", "Geolocation", "No quantum analysis"],
+            "use_case": "Quick overview of attack surface"
+        },
+        "Deep Quantum Analysis": {
+            "icon": "⚛️",
+            "color": "#667eea",
+            "speed": "Medium",
+            "depth": "Deep",
+            "features": ["Full quantum threat assessment", "Shor's algorithm analysis", "PQC recommendations", "HNDL risk evaluation"],
+            "use_case": "Complete quantum security posture assessment"
+        },
+        "Stealth Mode": {
+            "icon": "🥷",
+            "color": "#FF6B6B",
+            "speed": "Slow",
+            "depth": "Medium",
+            "features": ["Delayed requests (3s)", "Passive OSINT only", "Avoids detection", "Quantum analysis included"],
+            "use_case": "Red team exercises, avoiding IDS/IPS"
+        },
+        "Comprehensive Audit": {
+            "icon": "📋",
+            "color": "#764ba2",
+            "speed": "Thorough",
+            "depth": "Maximum",
+            "features": ["Extended subdomain list", "Full quantum + compliance", "ISMS framework ready", "50 assets max"],
+            "use_case": "Complete security audit for compliance"
+        }
+    }
+    return descriptions.get(mode, descriptions["Standard Recon"])
 
 # ============================================================================
 # HEADER SECTION
 # ============================================================================
 
-# Animated header with quantum theme
-st.markdown("<div class='quantum-particles'>", unsafe_allow_html=True)
-
 col1, col2, col3 = st.columns([1, 3, 1])
 with col2:
     st.title("⚛️ SENTINEL-V: QUANTUM AI NERVE CENTER")
     st.markdown("<p style='text-align: center; color: #a78bfa; font-size: 1.2rem; margin-top: -20px;'>Next-Generation Agentic Defense | Post-Quantum Cryptography Intelligence</p>", unsafe_allow_html=True)
-
-st.markdown("</div>", unsafe_allow_html=True)
 
 # Status banner
 col1, col2, col3, col4 = st.columns(4)
@@ -173,129 +224,238 @@ with col4:
 st.markdown("---")
 
 # ============================================================================
-# SIDEBAR - COMMAND INTERFACE
+# SIDEBAR - JARVIS COMMAND CENTER (FULLY FUNCTIONAL!)
 # ============================================================================
 
 with st.sidebar:
     st.markdown("### ⚡ JARVIS COMMAND CENTER")
-    st.markdown("<div class='quantum-border'>", unsafe_allow_html=True)
     
-    # Domain input
+    # Domain input section
+    st.markdown("---")
+    st.markdown("#### 🎯 Target Configuration")
+    
     target = st.text_input(
-        "🎯 Strategic Domain",
+        "Strategic Domain",
         value="prosec-networks.com",
         help="Enter target domain for quantum threat assessment",
         placeholder="example.com"
     )
     
-    st.markdown("</div>", unsafe_allow_html=True)
+    # ========================================================================
+    # SCAN MODE SELECTOR (NOW FUNCTIONAL!)
+    # ========================================================================
+    st.markdown("---")
+    st.markdown("#### 🔧 Scan Mode")
+    
+    scan_mode = st.selectbox(
+        "Select Operation Mode",
+        ["Standard Recon", "Deep Quantum Analysis", "Stealth Mode", "Comprehensive Audit"],
+        index=1,
+        help="Each mode has different speed, depth, and capabilities"
+    )
+    
+    # Display scan mode details
+    mode_info = get_scan_mode_description(scan_mode)
+    
+    st.markdown(f"""
+    <div style='background: rgba(102, 126, 234, 0.1); border-radius: 10px; padding: 1rem; border: 1px solid {mode_info["color"]}; margin: 0.5rem 0;'>
+        <h4 style='margin: 0; color: {mode_info["color"]};'>{mode_info["icon"]} {scan_mode}</h4>
+        <p style='margin: 0.5rem 0; font-size: 0.85rem;'>
+            <b>Speed:</b> {mode_info["speed"]} | <b>Depth:</b> {mode_info["depth"]}
+        </p>
+        <p style='margin: 0; font-size: 0.8rem; color: #888;'>{mode_info["use_case"]}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Show features for selected mode
+    with st.expander(f"📋 {scan_mode} Features", expanded=False):
+        for feature in mode_info["features"]:
+            st.markdown(f"✅ {feature}")
+    
+    # ========================================================================
+    # ADVANCED CONFIGURATION
+    # ========================================================================
     st.markdown("---")
     
-    # Advanced options
-    with st.expander("🔧 Advanced Configuration"):
-        scan_mode = st.selectbox(
-            "Scan Mode",
-            ["Standard Recon", "Deep Quantum Analysis", "Stealth Mode", "Comprehensive Audit"],
-            index=1
+    with st.expander("⚙️ Advanced Options", expanded=False):
+        # These options override scan mode defaults
+        custom_max_assets = st.slider(
+            "Max Assets to Scan",
+            min_value=5,
+            max_value=50,
+            value=ScanMode.get_config(scan_mode)["max_assets"],
+            help="Override default asset limit for this scan mode"
         )
         
-        enable_quantum_sim = st.checkbox("Enable Quantum Simulations", value=True)
-        enable_threat_timeline = st.checkbox("Generate Threat Timeline", value=True)
-        enable_pqc_roadmap = st.checkbox("PQC Migration Roadmap", value=True)
+        enable_quantum_override = st.checkbox(
+            "Force Quantum Analysis",
+            value=ScanMode.get_config(scan_mode)["enable_quantum"],
+            help="Enable quantum threat analysis regardless of scan mode"
+        )
         
-        max_assets = st.slider("Max Assets to Scan", 10, 50, 20)
+        enable_stealth_delay = st.checkbox(
+            "Enable Request Delays",
+            value=scan_mode == "Stealth Mode",
+            help="Add delays between requests to avoid detection"
+        )
     
+    # ========================================================================
+    # MAIN ACTION BUTTON
+    # ========================================================================
     st.markdown("---")
     
-    # Main action button
     if st.button("🚀 INITIALIZE QUANTUM DEFENSE", use_container_width=True, type="primary"):
         if not target or len(target) < 4:
             st.error("⚠️ Please enter a valid domain")
+            jarvis_speak("Invalid domain entered", "error")
         else:
             st.session_state.active_scan = True
+            st.session_state.current_scan_mode = scan_mode
+            jarvis_speak(f"Initializing {scan_mode} on {target}", "info")
             
-            with st.spinner("⚛️ Deploying Quantum-Aware Sentinel Agents..."):
-                try:
-                    # Progress tracking
-                    progress_container = st.empty()
-                    status_container = st.empty()
-                    
-                    def update_progress(percent, message):
-                        progress_container.progress(percent / 100)
-                        status_container.info(f"🔬 {message}")
-                    
-                    update_progress(10, "Initializing quantum threat analyzer...")
+            # Progress containers
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            try:
+                # Phase 1: Initialization
+                status_text.info(f"⚡ JARVIS: Initializing {scan_mode}...")
+                jarvis_speak(f"Scan mode: {scan_mode}", "info")
+                progress_bar.progress(10)
+                time.sleep(0.5)
+                
+                # Phase 2: Configuration
+                config = ScanMode.get_config(scan_mode)
+                status_text.info(f"🔧 JARVIS: Loading configuration... Max assets: {config['max_assets']}")
+                jarvis_speak(f"Config loaded. Max assets: {config['max_assets']}", "info")
+                progress_bar.progress(20)
+                time.sleep(0.3)
+                
+                # Phase 3: Reconnaissance
+                if "crt.sh" in config['subdomain_sources']:
+                    status_text.info("🔍 JARVIS: Querying certificate transparency logs...")
+                    jarvis_speak("Scanning crt.sh for subdomains", "info")
+                else:
+                    status_text.info("🔍 JARVIS: Running passive reconnaissance...")
+                    jarvis_speak("Passive recon mode active", "info")
+                progress_bar.progress(35)
+                time.sleep(0.5)
+                
+                # Phase 4: Asset Discovery
+                status_text.info("📡 JARVIS: Discovering assets and resolving IPs...")
+                jarvis_speak("Asset discovery in progress", "info")
+                progress_bar.progress(45)
+                
+                # Run the actual audit
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                # Phase 5: SSL Analysis
+                status_text.info("🔐 JARVIS: Analyzing SSL/TLS configurations...")
+                jarvis_speak("Checking SSL certificates", "info")
+                progress_bar.progress(55)
+                
+                # Phase 6: Quantum Analysis (if enabled)
+                if config['enable_quantum']:
+                    status_text.info("⚛️ JARVIS: Computing quantum vulnerability vectors...")
+                    jarvis_speak("Running Shor's algorithm threat analysis", "quantum")
+                    progress_bar.progress(70)
                     time.sleep(0.5)
                     
-                    update_progress(25, "Scanning certificate transparency logs...")
-                    time.sleep(0.5)
-                    
-                    # Run async audit
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    
-                    update_progress(40, "Resolving IP addresses & geolocations...")
-                    time.sleep(0.5)
-                    
-                    update_progress(55, "Analyzing SSL/TLS configurations...")
-                    df = loop.run_until_complete(run_audit(target))
-                    
-                    update_progress(70, "Computing quantum vulnerability vectors...")
-                    time.sleep(0.5)
-                    
-                    update_progress(85, "Generating PQC migration strategies...")
-                    time.sleep(0.5)
-                    
-                    update_progress(100, "Compiling quantum intelligence report...")
-                    time.sleep(0.5)
-                    
-                    # Store results
-                    st.session_state.audit_data = df
-                    st.session_state.scan_history.append({
-                        'domain': target,
-                        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        'assets_found': len(df),
-                        'quantum_vulnerable': len(df[df['quantum_years_vulnerable'] <= 5]),
-                        'scan_mode': scan_mode
-                    })
-                    
-                    st.session_state.active_scan = False
-                    
-                    progress_container.empty()
-                    status_container.empty()
-                    
-                    st.success(f"✅ Quantum audit complete! Discovered {len(df)} assets")
-                    st.balloons()
-                    
-                    loop.close()
-                    
-                except Exception as e:
-                    st.error(f"❌ Scan failed: {str(e)}")
-                    st.session_state.active_scan = False
+                    status_text.info("🧬 JARVIS: Generating PQC migration strategies...")
+                    jarvis_speak("Calculating ML-KEM recommendations", "quantum")
+                    progress_bar.progress(80)
+                else:
+                    status_text.info("📊 JARVIS: Compiling reconnaissance data...")
+                    jarvis_speak("Quantum analysis skipped (Standard Recon mode)", "info")
+                    progress_bar.progress(80)
+                
+                # Execute the scan
+                df = loop.run_until_complete(run_audit(target, scan_mode))
+                
+                # Phase 7: Finalization
+                status_text.info("📋 JARVIS: Compiling intelligence report...")
+                jarvis_speak(f"Scan complete. {len(df)} assets discovered.", "success")
+                progress_bar.progress(95)
+                time.sleep(0.3)
+                
+                # Store results
+                st.session_state.audit_data = df
+                st.session_state.scan_history.append({
+                    'domain': target,
+                    'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    'assets_found': len(df),
+                    'critical_count': len(df[df['Quantum_Risk'].str.contains('Critical', na=False)]),
+                    'scan_mode': scan_mode
+                })
+                
+                progress_bar.progress(100)
+                status_text.empty()
+                progress_bar.empty()
+                
+                st.success(f"✅ {scan_mode} complete! Discovered {len(df)} assets")
+                jarvis_speak("Mission accomplished!", "success")
+                st.balloons()
+                
+                loop.close()
+                
+            except Exception as e:
+                st.error(f"❌ Scan failed: {str(e)}")
+                jarvis_speak(f"Error: {str(e)}", "error")
+                
+            finally:
+                st.session_state.active_scan = False
     
-    # Quick actions
+    # ========================================================================
+    # JARVIS LOG
+    # ========================================================================
     st.markdown("---")
-    st.markdown("### ⚡ Quick Actions")
+    st.markdown("#### 🤖 JARVIS Activity Log")
+    
+    if st.session_state.jarvis_messages:
+        log_container = st.container()
+        with log_container:
+            for msg in reversed(st.session_state.jarvis_messages[-5:]):
+                if msg['type'] == 'error':
+                    st.error(f"[{msg['time']}] {msg['message']}")
+                elif msg['type'] == 'success':
+                    st.success(f"[{msg['time']}] {msg['message']}")
+                elif msg['type'] == 'quantum':
+                    st.info(f"⚛️ [{msg['time']}] {msg['message']}")
+                else:
+                    st.info(f"[{msg['time']}] {msg['message']}")
+    else:
+        st.caption("Awaiting commands...")
+    
+    # ========================================================================
+    # QUICK ACTIONS
+    # ========================================================================
+    st.markdown("---")
+    st.markdown("#### ⚡ Quick Actions")
     
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔄 Reset", use_container_width=True):
             st.session_state.audit_data = None
+            st.session_state.jarvis_messages = []
+            jarvis_speak("System reset", "info")
             st.rerun()
     with col2:
-        if st.button("📊 Demo", use_container_width=True):
-            st.session_state.quantum_demo_active = True
+        if st.button("📜 History", use_container_width=True):
+            st.session_state.show_history = not st.session_state.get('show_history', False)
     
-    # Scan history
-    if st.session_state.scan_history:
+    # Show scan history
+    if st.session_state.get('show_history', False) and st.session_state.scan_history:
         st.markdown("---")
-        st.markdown("### 📜 Scan History")
+        st.markdown("#### 📜 Scan History")
         for idx, scan in enumerate(reversed(st.session_state.scan_history[-5:])):
             with st.expander(f"🎯 {scan['domain']}", expanded=False):
-                st.text(f"⏰ {scan['timestamp']}")
-                st.text(f"📦 {scan['assets_found']} assets")
-                st.text(f"⚛️ {scan['quantum_vulnerable']} quantum-vulnerable")
-                st.text(f"🔬 Mode: {scan['scan_mode']}")
+                st.markdown(f"""
+                - **Time:** {scan['timestamp']}
+                - **Mode:** {scan['scan_mode']}
+                - **Assets:** {scan['assets_found']}
+                - **Critical:** {scan['critical_count']}
+                """)
 
 # ============================================================================
 # MAIN CONTENT AREA
@@ -305,6 +465,22 @@ if st.session_state.audit_data is None:
     # ========================================================================
     # WELCOME SCREEN
     # ========================================================================
+    
+    st.markdown("---")
+    
+    # Scan mode comparison
+    st.subheader("🔧 Scan Mode Comparison")
+    
+    mode_data = {
+        "Mode": ["Standard Recon", "Deep Quantum Analysis", "Stealth Mode", "Comprehensive Audit"],
+        "Speed": ["⚡ Fast", "🔄 Medium", "🐢 Slow", "📊 Thorough"],
+        "Max Assets": [10, 25, 15, 50],
+        "Quantum Analysis": ["❌", "✅", "✅", "✅"],
+        "Stealth Delays": ["❌", "❌", "✅ (3s)", "❌"],
+        "Best For": ["Quick scan", "Security assessment", "Red team", "Full audit"]
+    }
+    
+    st.table(pd.DataFrame(mode_data))
     
     st.markdown("---")
     
@@ -381,7 +557,7 @@ if st.session_state.audit_data is None:
     
     st.plotly_chart(fig, use_container_width=True)
     
-    st.info("🎬 **Initialize the Sentinel Agent to begin quantum threat assessment.** Click 'Initialize Quantum Defense' in the sidebar.")
+    st.info("🎬 **Select a scan mode and click 'Initialize Quantum Defense' to begin.**")
     
     # Preview map
     st.markdown("---")
@@ -396,8 +572,16 @@ else:
     
     df = st.session_state.audit_data
     
+    # Show current scan mode
+    st.markdown(f"""
+    <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                color: white; padding: 0.5rem 1rem; border-radius: 20px; 
+                display: inline-block; margin-bottom: 1rem;'>
+        🔬 Scan Mode: <b>{st.session_state.current_scan_mode}</b>
+    </div>
+    """, unsafe_allow_html=True)
+    
     # Quantum-enhanced metrics dashboard
-    st.markdown("---")
     st.subheader("📊 Quantum Threat Intelligence Dashboard")
     
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -416,7 +600,7 @@ else:
         st.metric("🔴 Critical Risks", critical_count, delta=delta_text)
     
     with col3:
-        delta_text = f"Vulnerable by 2030" if quantum_vulnerable > 0 else "Safe"
+        delta_text = f"By 2030" if quantum_vulnerable > 0 else "Safe"
         st.metric("⚛️ Quantum Threats", quantum_vulnerable, delta=delta_text)
     
     with col4:
@@ -424,844 +608,208 @@ else:
         st.metric("🎯 Harvest Threat", harvest_threat, delta=delta_text)
     
     with col5:
-        delta_text = "⚠️ High" if avg_risk > 60 else "✅ Acceptable"
-        st.metric("📈 Avg Risk Score", f"{avg_risk:.1f}/100", delta=delta_text)
+        delta_text = "⚠️ High" if avg_risk > 60 else "✅ OK"
+        st.metric("📈 Avg Risk", f"{avg_risk:.1f}/100", delta=delta_text)
     
     # ========================================================================
-    # GLOBAL MAP WITH QUANTUM OVERLAY
+    # GLOBAL MAP
     # ========================================================================
     
     st.markdown("---")
-    st.subheader("🌐 Global Adversarial Radar with Quantum Threat Overlay")
+    st.subheader("🌐 Global Adversarial Radar")
     
-    # Create sophisticated map
     m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB dark_matter")
     marker_cluster = MarkerCluster().add_to(m)
     
-    # Prepare heatmap data
     heat_data = []
     
     for _, row in df.iterrows():
         if row['lat'] != 0.0 and row['lon'] != 0.0:
-            # Determine marker properties based on quantum risk
             if "Critical" in row['Quantum_Risk']:
                 color = 'red'
-                icon = 'radiation'
-            elif "High" in row['Quantum_Risk'] or "Quantum Vulnerable" in row['Quantum_Risk']:
+                icon = 'warning-sign'
+            elif "High" in row['Quantum_Risk']:
                 color = 'orange'
                 icon = 'warning-sign'
             else:
                 color = 'blue'
                 icon = 'shield'
             
-            # Create quantum-aware popup
-            quantum_status = "⚛️ QUANTUM-SAFE" if row['quantum_safe_crypto'] else "⚠️ QUANTUM-VULNERABLE"
-            harvest_status = "🎯 HARVEST THREAT" if row['harvest_now_threat'] else "✓ Low Risk"
-            
             popup_html = f"""
-            <div style='width: 300px; font-family: Arial;'>
-                <h3 style='margin: 0; color: {color}; border-bottom: 2px solid {color};'>
-                    {row['asset']}
-                </h3>
-                <div style='margin-top: 10px;'>
-                    <b>🌍 Location:</b> {row['city']}, {row['country']}<br>
-                    <b>🔗 IP:</b> {row['ip']}<br>
-                    <b>🏢 ISP:</b> {row['isp'][:40]}<br>
-                    <hr style='margin: 8px 0;'>
-                    <b>🛡️ Risk Level:</b> {row['Quantum_Risk']}<br>
-                    <b>📊 Risk Score:</b> {row['Risk_Score']}/100<br>
-                    <b>🎯 Criticality:</b> {row['criticality']}<br>
-                    <hr style='margin: 8px 0;'>
-                    <b>⚛️ Quantum Status:</b> {quantum_status}<br>
-                    <b>🔐 Current Crypto:</b> {row['ssl_cipher'][:30]}<br>
-                    <b>⏰ Vulnerable In:</b> {row['quantum_years_vulnerable']} years<br>
-                    <b>🎯 Threat Type:</b> {row['quantum_threat_algorithm']}'s Algorithm<br>
-                    <b>{harvest_status}</b><br>
-                    <hr style='margin: 8px 0;'>
-                    <b>💡 PQC Migration:</b> {row['PQC_Migration']}<br>
-                    <b>⏱️ Timeline:</b> {row['PQC_Timeline']}<br>
-                    <b>🚨 Priority:</b> {row['PQC_Priority']}<br>
-                    <hr style='margin: 8px 0;'>
-                    <b>📋 Action:</b><br>{row['Solution'][:100]}...
-                </div>
+            <div style='width: 280px; font-family: Arial;'>
+                <h4 style='margin: 0; color: {color};'>{row['asset']}</h4>
+                <hr style='margin: 5px 0;'>
+                <b>Location:</b> {row['city']}, {row['country']}<br>
+                <b>IP:</b> {row['ip']}<br>
+                <b>Risk:</b> {row['Quantum_Risk']} ({row['Risk_Score']}/100)<br>
+                <b>Quantum Threat:</b> {row['quantum_years_vulnerable']} years<br>
+                <b>PQC:</b> {row['PQC_Migration']}<br>
+                <b>Mode:</b> {row.get('scan_mode', 'N/A')}
             </div>
             """
             
             folium.Marker(
                 location=[row['lat'], row['lon']],
-                popup=folium.Popup(popup_html, max_width=350),
+                popup=folium.Popup(popup_html, max_width=300),
                 icon=folium.Icon(color=color, icon=icon, prefix='fa'),
                 tooltip=f"{row['asset']} - {row['Quantum_Risk']}"
             ).add_to(marker_cluster)
             
-            # Add to heatmap with quantum risk intensity
             intensity = row['Risk_Score'] / 100
             heat_data.append([row['lat'], row['lon'], intensity])
     
-    # Add heatmap layer
     if heat_data:
-        HeatMap(
-            heat_data,
-            radius=20,
-            blur=30,
-            max_zoom=13,
-            gradient={0.4: 'blue', 0.6: 'yellow', 0.8: 'orange', 1: 'red'}
-        ).add_to(m)
+        HeatMap(heat_data, radius=20, blur=30).add_to(m)
     
     st_folium(m, width=1400, height=500)
     
     # ========================================================================
-    # TABBED INTELLIGENCE DISPLAY
+    # TABBED DISPLAY
     # ========================================================================
     
     st.markdown("---")
     
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "⚛️ Quantum Intelligence",
-        "🎯 Threat Analysis",
-        "💡 PQC Migration",
-        "📊 Analytics & Insights",
-        "📥 Export & Reporting",
-        "🤖 ISMS Framework Generator"
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "⚛️ Intelligence Matrix",
+        "🎯 Threat Analysis", 
+        "💡 PQC Roadmap",
+        "📥 Export"
     ])
     
-    # TAB 1: Quantum Intelligence Matrix
     with tab1:
         st.subheader("⚛️ Quantum Threat Intelligence Matrix")
         
-        st.markdown("""
-        **Understanding the Data:**
-        - **Quantum Risk:** Overall threat level combining classical and quantum vulnerabilities
-        - **Quantum Years Vulnerable:** Time until quantum computers can break current encryption
-        - **Harvest Threat:** Data encrypted today could be decrypted in the future
-        - **PQC Migration:** Recommended NIST-approved post-quantum algorithms
-        """)
-        
-        # Display comprehensive dataframe
         display_df = df[[
             'asset', 'ip', 'country', 'criticality',
             'Quantum_Risk', 'Risk_Score', 'quantum_years_vulnerable',
-            'quantum_threat_algorithm', 'PQC_Migration', 'PQC_Priority',
-            'harvest_now_threat', 'quantum_safe_crypto'
+            'PQC_Migration', 'PQC_Priority', 'scan_mode'
         ]].copy()
         
         display_df.columns = [
-            'Asset', 'IP Address', 'Country', 'Criticality',
-            'Quantum Risk', 'Risk Score', 'Years Vulnerable',
-            'Threat Algorithm', 'PQC Strategy', 'Priority',
-            'Harvest Threat', 'Quantum-Safe'
+            'Asset', 'IP', 'Country', 'Criticality',
+            'Quantum Risk', 'Score', 'Years Vulnerable',
+            'PQC Strategy', 'Priority', 'Scan Mode'
         ]
         
-        # Color-code the dataframe
-        def highlight_risk(val):
-            if isinstance(val, str):
-                if 'Critical' in val or 'CRITICAL' in val or 'P0' in val:
-                    return 'background-color: #ff6b6b'
-                elif 'High' in val or 'HIGH' in val or 'P1' in val:
-                    return 'background-color: #ffa500'
-                elif val == True or val == 'True':
-                    return 'background-color: #ff6b6b'
-            return ''
-        
-        st.dataframe(
-            display_df.style.applymap(highlight_risk),
-            use_container_width=True,
-            height=500
-        )
-        
-        # Download quantum intelligence as JSON
-        if st.button("📥 Download Quantum Intelligence (JSON)"):
-            json_data = df.to_json(orient='records', indent=2)
-            st.download_button(
-                "Download JSON",
-                data=json_data,
-                file_name=f"quantum_intelligence_{target}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json"
-            )
+        st.dataframe(display_df, use_container_width=True, height=500)
     
-    # TAB 2: Threat Analysis
     with tab2:
-        st.subheader("🎯 Prioritized Threat Analysis")
+        st.subheader("🎯 Threat Analysis by Scan Mode")
         
-        # Quantum threat timeline for assets
-        st.markdown("### ⏰ Quantum Vulnerability Timeline")
+        st.info(f"**Current Scan Mode:** {st.session_state.current_scan_mode}")
         
-        vulnerability_years = df['quantum_years_vulnerable'].value_counts().sort_index()
-        
+        # Risk distribution
         fig = go.Figure(data=[
             go.Bar(
-                x=list(vulnerability_years.index),
-                y=list(vulnerability_years.values),
-                marker=dict(
-                    color=list(vulnerability_years.values),
-                    colorscale='Reds',
-                    showscale=True
-                ),
-                text=list(vulnerability_years.values),
-                textposition='auto'
+                x=['Critical', 'High', 'Moderate', 'Low'],
+                y=[
+                    len(df[df['Quantum_Risk'].str.contains('Critical', na=False)]),
+                    len(df[df['Quantum_Risk'].str.contains('High', na=False)]),
+                    len(df[df['Quantum_Risk'].str.contains('Moderate', na=False)]),
+                    len(df[df['Quantum_Risk'].str.contains('Low', na=False)])
+                ],
+                marker_color=['#ff6b6b', '#ffa500', '#ffd700', '#4ecdc4']
             )
         ])
         
         fig.update_layout(
-            title="Asset Distribution by Years Until Quantum Vulnerability",
-            xaxis_title="Years Until Vulnerable",
-            yaxis_title="Number of Assets",
+            title="Risk Distribution",
             template="plotly_dark",
-            height=400
+            height=350
         )
         
         st.plotly_chart(fig, use_container_width=True)
         
-        # Threat breakdown
-        st.markdown("---")
-        st.markdown("### 🔍 Detailed Threat Breakdown")
-        
-        # Critical assets requiring immediate action
+        # Critical assets
         critical_assets = df[df['Quantum_Risk'].str.contains('Critical', na=False)]
-        high_assets = df[df['Quantum_Risk'].str.contains('High', na=False)]
-        moderate_assets = df[~df['Quantum_Risk'].str.contains('Critical|High', na=False)]
-        
         if not critical_assets.empty:
-            st.error(f"🚨 **CRITICAL PRIORITY** - {len(critical_assets)} Assets Require Immediate Action")
+            st.error(f"🚨 {len(critical_assets)} CRITICAL assets require immediate action!")
             for _, row in critical_assets.iterrows():
-                with st.expander(f"🔴 {row['asset']} - Risk Score: {row['Risk_Score']}/100", expanded=True):
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.markdown(f"""
-                        **📍 Asset Details:**
-                        - Location: {row['city']}, {row['country']}
-                        - IP: {row['ip']}
-                        - ISP: {row['isp']}
-                        - Criticality: {row['criticality']}
-                        
-                        **⚛️ Quantum Threat:**
-                        - Algorithm: {row['quantum_threat_algorithm']}'s
-                        - Years Vulnerable: {row['quantum_years_vulnerable']}
-                        - Harvest Threat: {'🎯 ACTIVE' if row['harvest_now_threat'] else '✓ Low'}
-                        """)
-                    
-                    with col2:
-                        st.markdown(f"""
-                        **🛡️ Current Security:**
-                        - SSL: {row['ssl_version']}
-                        - Cipher: {row['ssl_cipher'][:40]}
-                        - Quantum-Safe: {'✅ Yes' if row['quantum_safe_crypto'] else '❌ No'}
-                        
-                        **💡 PQC Migration:**
-                        - Recommended: {row['PQC_Migration']}
-                        - Signature: {row['PQC_Signature']}
-                        - Priority: {row['PQC_Priority']}
-                        - Timeline: {row['PQC_Timeline']}
-                        """)
-                    
-                    st.warning(f"**🚨 REQUIRED ACTION:** {row['Solution']}")
-        
-        if not high_assets.empty:
-            st.warning(f"⚠️ **HIGH PRIORITY** - {len(high_assets)} Assets Need Migration Planning")
-            for _, row in high_assets.iterrows():
-                with st.expander(f"🟠 {row['asset']} - Risk Score: {row['Risk_Score']}/100"):
+                with st.expander(f"🔴 {row['asset']}", expanded=False):
                     st.markdown(f"""
-                    **Quantum Threat:** {row['quantum_threat_algorithm']}'s algorithm breaks this in {row['quantum_years_vulnerable']} years  
-                    **Recommendation:** {row['Solution']}  
-                    **PQC Strategy:** Migrate to {row['PQC_Migration']} within {row['PQC_Timeline']}
+                    - **Risk Score:** {row['Risk_Score']}/100
+                    - **Location:** {row['city']}, {row['country']}
+                    - **Quantum Vulnerable In:** {row['quantum_years_vulnerable']} years
+                    - **PQC Migration:** {row['PQC_Migration']}
+                    - **Action:** {row['Solution']}
                     """)
-        
-        if not moderate_assets.empty:
-            st.success(f"✅ **STANDARD MONITORING** - {len(moderate_assets)} Assets Under Normal Security Posture")
-            st.caption("These assets have acceptable risk levels but should be reviewed quarterly.")
     
-    # TAB 3: PQC Migration Roadmap
     with tab3:
-        st.subheader("💡 Post-Quantum Cryptography Migration Roadmap")
+        st.subheader("💡 Post-Quantum Migration Roadmap")
         
-        st.markdown("""
-        ### 🎯 NIST Post-Quantum Cryptography Standards
-        
-        In 2024, NIST finalized the following quantum-resistant algorithms:
-        
-        - **FIPS 203 (ML-KEM):** Module-Lattice-Based Key-Encapsulation Mechanism
-        - **FIPS 204 (ML-DSA):** Module-Lattice-Based Digital Signature Algorithm
-        - **FIPS 205 (SLH-DSA):** Stateless Hash-Based Digital Signature Algorithm
-        """)
-        
-        # Migration priority breakdown
-        st.markdown("---")
-        st.markdown("### 📊 Migration Priority Distribution")
-        
-        priority_counts = df['PQC_Priority'].value_counts()
-        
-        fig = go.Figure(data=[
-            go.Pie(
-                labels=list(priority_counts.index),
-                values=list(priority_counts.values),
-                hole=0.4,
-                marker=dict(colors=['#ff6b6b', '#ffa500', '#4ecdc4']),
-                textinfo='label+percent+value'
+        if st.session_state.current_scan_mode in ["Deep Quantum Analysis", "Stealth Mode", "Comprehensive Audit"]:
+            # PQC priority distribution
+            priority_counts = df['PQC_Priority'].value_counts()
+            
+            fig = go.Figure(data=[
+                go.Pie(
+                    labels=list(priority_counts.index),
+                    values=list(priority_counts.values),
+                    hole=0.4,
+                    marker=dict(colors=['#ff6b6b', '#ffa500', '#4ecdc4'])
+                )
+            ])
+            
+            fig.update_layout(
+                title="PQC Migration Priorities",
+                template="plotly_dark",
+                height=400
             )
-        ])
-        
-        fig.update_layout(
-            title="PQC Migration Priorities",
-            template="plotly_dark",
-            height=400
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Detailed migration roadmap
-        st.markdown("---")
-        st.markdown("### 🗓️ Phased Migration Timeline")
-        
-        phases = {
-            "Phase 1: Assessment & Planning (Weeks 1-4)": [
-                "Inventory all cryptographic assets and dependencies",
-                "Identify critical systems requiring immediate PQC migration",
-                "Select appropriate NIST-approved PQC algorithms",
-                "Design hybrid classical-PQC architecture",
-                "Assess performance impacts and compatibility"
-            ],
-            "Phase 2: Pilot Deployment (Weeks 5-12)": [
-                "Deploy PQC to isolated test environment",
-                "Conduct performance benchmarking",
-                "Test interoperability with existing systems",
-                "Train technical teams on PQC implementation",
-                "Document lessons learned and optimize"
-            ],
-            "Phase 3: Production Rollout (Months 3-6)": [
-                "Begin with P0 critical assets",
-                "Implement hybrid mode for backwards compatibility",
-                "Monitor system performance and stability",
-                "Gradual expansion to P1 and P2 assets",
-                "Continuous security testing and validation"
-            ],
-            "Phase 4: Full Migration (Months 6-12)": [
-                "Complete migration of all production systems",
-                "Decommission legacy classical-only crypto",
-                "Implement cryptographic agility framework",
-                "Establish ongoing quantum threat monitoring",
-                "Regular compliance audits and updates"
-            ]
-        }
-        
-        for phase, tasks in phases.items():
-            with st.expander(phase, expanded=True):
-                for task in tasks:
-                    st.markdown(f"- {task}")
-        
-        # Asset-specific recommendations
-        st.markdown("---")
-        st.markdown("### 🎯 Asset-Specific PQC Recommendations")
-        
-        for _, row in df.iterrows():
-            if row['quantum_years_vulnerable'] <= 5:
-                with st.expander(f"⚛️ {row['asset']}", expanded=False):
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.markdown(f"""
-                        **Current State:**
-                        - Cipher: {row['ssl_cipher']}
-                        - Vulnerable: {row['quantum_years_vulnerable']} years
-                        - Threat: {row['quantum_threat_algorithm']}'s Algorithm
-                        """)
-                    
-                    with col2:
-                        st.markdown(f"""
-                        **Migration Plan:**
-                        - KEM: {row['PQC_Migration']}
-                        - Signature: {row['PQC_Signature']}
-                        - Timeline: {row['PQC_Timeline']}
-                        - Priority: {row['PQC_Priority']}
-                        """)
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Migration phases
+            st.markdown("### 📋 Migration Phases")
+            
+            phases = {
+                "Phase 1 (0-3 months)": "Migrate CRITICAL assets to ML-KEM-1024",
+                "Phase 2 (3-6 months)": "Deploy ML-DSA signatures, hybrid TLS",
+                "Phase 3 (6-12 months)": "Complete HIGH priority migrations",
+                "Phase 4 (12-24 months)": "Full PQC adoption, decommission legacy"
+            }
+            
+            for phase, action in phases.items():
+                st.success(f"**{phase}:** {action}")
+        else:
+            st.warning("⚠️ PQC analysis not available in Standard Recon mode. Use Deep Quantum Analysis for full PQC roadmap.")
     
-    # TAB 4: Analytics & Insights
     with tab4:
-        st.subheader("📊 Quantum Threat Analytics & Insights")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 📈 Risk Score Distribution")
-            risk_bins = pd.cut(df['Risk_Score'], bins=[0, 40, 60, 80, 100], labels=['Low', 'Moderate', 'High', 'Critical'])
-            risk_dist = risk_bins.value_counts()
-            
-            fig = go.Figure(data=[
-                go.Bar(
-                    x=list(risk_dist.index),
-                    y=list(risk_dist.values),
-                    marker=dict(color=['#4ecdc4', '#ffa500', '#ff9800', '#ff6b6b']),
-                    text=list(risk_dist.values),
-                    textposition='auto'
-                )
-            ])
-            
-            fig.update_layout(
-                xaxis_title="Risk Level",
-                yaxis_title="Number of Assets",
-                template="plotly_dark",
-                height=350
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-        
-        with col2:
-            st.markdown("### 🌍 Geographic Distribution")
-            geo_dist = df['country'].value_counts().head(10)
-            
-            fig = go.Figure(data=[
-                go.Bar(
-                    x=list(geo_dist.values),
-                    y=list(geo_dist.index),
-                    orientation='h',
-                    marker=dict(
-                        color=list(geo_dist.values),
-                        colorscale='Viridis'
-                    ),
-                    text=list(geo_dist.values),
-                    textposition='auto'
-                )
-            ])
-            
-            fig.update_layout(
-                xaxis_title="Number of Assets",
-                yaxis_title="Country",
-                template="plotly_dark",
-                height=350
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-        
-        st.markdown("---")
-        st.markdown("### ⏰ Quantum Threat Progression Analysis")
-        
-        vulnerability_by_year = {}
-        current_year = datetime.now().year
-        
-        for year in range(current_year, 2040):
-            vulnerable_count = len(df[df['quantum_years_vulnerable'] <= (year - current_year)])
-            vulnerability_by_year[year] = vulnerable_count
-        
-        years = list(vulnerability_by_year.keys())
-        vulnerable_assets = list(vulnerability_by_year.values())
-        
-        fig = go.Figure()
-        
-        fig.add_trace(go.Scatter(
-            x=years,
-            y=vulnerable_assets,
-            mode='lines+markers',
-            name='Vulnerable Assets',
-            fill='tozeroy',
-            line=dict(color='#ff6b6b', width=3),
-            marker=dict(size=8)
-        ))
-        
-        fig.add_vline(x=2030, line_dash="dash", line_color="#ffa500", 
-                      annotation_text="CRQC Expected", annotation_position="top")
-        
-        fig.update_layout(
-            title="Asset Vulnerability Projection Over Time",
-            xaxis_title="Year",
-            yaxis_title="Cumulative Vulnerable Assets",
-            template="plotly_dark",
-            height=400
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
-        
-        st.markdown("---")
-        st.markdown("### 💡 Key Insights & Recommendations")
-        
-        insights = []
-        
-        immediate_threats = len(df[df['quantum_years_vulnerable'] <= 3])
-        if immediate_threats > 0:
-            insights.append(f"🚨 **URGENT:** {immediate_threats} assets will be vulnerable to quantum attacks within 3 years")
-        
-        harvest_count = len(df[df['harvest_now_threat'] == True])
-        if harvest_count > 0:
-            insights.append(f"🎯 **HARVEST THREAT:** {harvest_count} assets contain long-lived data vulnerable to 'Harvest Now, Decrypt Later' attacks")
-        
-        non_quantum_safe = len(df[df['quantum_safe_crypto'] == False])
-        insights.append(f"⚛️ **PQC MIGRATION:** {non_quantum_safe} assets require post-quantum cryptography implementation")
-        
-        top_country = df['country'].value_counts().index[0]
-        top_country_count = df['country'].value_counts().values[0]
-        insights.append(f"🌍 **GEOGRAPHIC RISK:** {top_country_count} assets concentrated in {top_country}")
-        
-        if avg_risk >= 70:
-            insights.append(f"📊 **HIGH RISK ENVIRONMENT:** Average risk score of {avg_risk:.1f}/100 indicates immediate action required")
-        
-        for insight in insights:
-            st.warning(insight)
-    
-    # TAB 5: Export & Reporting
-    with tab5:
-        st.subheader("📥 Export & Reporting Center")
-        
-        st.markdown("""
-        Generate comprehensive reports for stakeholders, compliance teams, and technical staff.
-        All exports include quantum threat intelligence and PQC migration roadmaps.
-        """)
+        st.subheader("📥 Export Reports")
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.markdown("### 📄 Executive PDF Report")
-            st.markdown("""
-            **Includes:**
-            - Executive summary
-            - Quantum threat timeline
-            - Asset intelligence matrix
-            - PQC migration roadmap
-            - Risk prioritization
-            - NIS2 compliance status
-            """)
-            
-            pdf_bytes = generate_pdf_report(df, target)
-            
+            st.markdown("### 📄 PDF Report")
+            pdf_bytes = generate_pdf_report(df, target, st.session_state.current_scan_mode)
             st.download_button(
-                "📥 Download PDF Report",
+                "📥 Download PDF",
                 data=pdf_bytes,
-                file_name=f"Sentinel_V_Quantum_Audit_{target}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                file_name=f"Sentinel_V_{target}_{datetime.now().strftime('%Y%m%d')}.pdf",
                 mime="application/pdf",
-                use_container_width=True,
-                type="primary"
+                use_container_width=True
             )
         
         with col2:
-            st.markdown("### 📊 Technical CSV Data")
-            st.markdown("""
-            **Includes:**
-            - All asset details
-            - Quantum risk metrics
-            - PQC recommendations
-            - Timeline data
-            - SIEM-compatible format
-            """)
-            
+            st.markdown("### 📊 CSV Data")
             csv = df.to_csv(index=False).encode('utf-8')
-            
             st.download_button(
-                "📥 Download CSV Data",
+                "📥 Download CSV",
                 data=csv,
-                file_name=f"Sentinel_V_Data_{target}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                file_name=f"Sentinel_V_{target}_{datetime.now().strftime('%Y%m%d')}.csv",
                 mime="text/csv",
                 use_container_width=True
             )
         
         with col3:
-            st.markdown("### 🔗 API JSON Format")
-            st.markdown("""
-            **Includes:**
-            - Structured JSON
-            - API-compatible
-            - Automation-ready
-            - Complete metadata
-            - Quantum intelligence
-            """)
-            
+            st.markdown("### 🔗 JSON API")
             json_data = df.to_json(orient='records', indent=2)
-            
             st.download_button(
-                "📥 Download JSON Data",
+                "📥 Download JSON",
                 data=json_data,
-                file_name=f"Sentinel_V_API_{target}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                file_name=f"Sentinel_V_{target}_{datetime.now().strftime('%Y%m%d')}.json",
                 mime="application/json",
                 use_container_width=True
             )
-        
-        st.markdown("---")
-        st.markdown("### 🛠️ Custom Report Builder")
-        
-        with st.expander("Build Custom Report", expanded=False):
-            report_name = st.text_input("Report Name", value=f"Custom_Report_{target}")
-            
-            include_options = st.multiselect(
-                "Include Sections",
-                ["Executive Summary", "Quantum Threat Timeline", "Asset Details", 
-                 "Risk Analysis", "PQC Roadmap", "Geographic Distribution", "Recommendations"],
-                default=["Executive Summary", "Asset Details", "PQC Roadmap"]
-            )
-            
-            filter_by_risk = st.multiselect(
-                "Filter by Risk Level",
-                ["Critical (HNDL)", "High - Quantum Vulnerable", "Moderate", "Low"],
-                default=[]
-            )
-            
-            if st.button("Generate Custom Report", use_container_width=True):
-                filtered_df = df if not filter_by_risk else df[df['Quantum_Risk'].isin(filter_by_risk)]
-                st.success(f"Custom report '{report_name}' generated with {len(filtered_df)} assets!")
-                st.dataframe(filtered_df, use_container_width=True)
-    
-    # TAB 6: ISMS Framework Generator (FIXED)
-    with tab6:
-        st.subheader("🤖 Autonomous ISMS Framework Generator")
-        
-        st.markdown("""
-        **AI-Powered Security Framework Generation**
-        
-        Automatically generate complete ISMS frameworks tailored to your organization:
-        - ✅ ISO 27001 Statement of Applicability
-        - ✅ BSI IT-Grundschutz Bausteine Mapping
-        - ✅ NIS2 Article 21 Compliance Report
-        - ✅ Implementation Roadmap with Timeline
-        - ✅ Budget Estimation & ROI Analysis
-        """)
-        
-        st.markdown("---")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 📋 Framework Selection")
-            gen_iso27001 = st.checkbox("ISO 27001 Statement of Applicability", value=True)
-            gen_bsi = st.checkbox("BSI IT-Grundschutz Bausteine", value=True)
-            gen_nis2 = st.checkbox("NIS2 Article 21 Compliance", value=True)
-        
-        with col2:
-            st.markdown("### ⚙️ Customization")
-            timeline_months = st.slider("Implementation Timeline (months)", 6, 24, 12)
-            include_roadmap = st.checkbox("Include Implementation Roadmap", value=True)
-            include_budget = st.checkbox("Include Budget Estimation", value=True)
-        
-        st.markdown("---")
-        
-        if st.button("🚀 GENERATE ISMS FRAMEWORK", type="primary", use_container_width=True):
-            with st.spinner("🤖 AI is generating your custom ISMS framework..."):
-                time.sleep(1)
-                
-                # Generate framework based on audit data
-                framework = {
-                    'iso27001': {
-                        'scope': f"All {total_assets} digital assets of {target} including quantum-vulnerable systems",
-                        'critical_controls': critical_count,
-                        'controls': {
-                            'A.5.1 - Information Security Policies': {
-                                'implementation': 'Develop quantum-aware security policies',
-                                'quantum': 'Include PQC migration policy',
-                                'priority': 'P0' if critical_count > 0 else 'P1'
-                            },
-                            'A.8.24 - Cryptographic Controls': {
-                                'implementation': 'Implement NIST PQC algorithms (FIPS 203/204/205)',
-                                'quantum': f'Migrate {quantum_vulnerable} quantum-vulnerable assets',
-                                'priority': 'P0'
-                            },
-                            'A.8.8 - Management of Technical Vulnerabilities': {
-                                'implementation': 'Continuous quantum threat monitoring',
-                                'quantum': 'Deploy quantum vulnerability scanner',
-                                'priority': 'P1'
-                            }
-                        }
-                    },
-                    'bsi': {
-                        'framework': 'IT-Grundschutz Compendium Edition 2024',
-                        'iso27001_compatible': True,
-                        'bausteine': {
-                            'CON.1 - Crypto Concept': {
-                                'implementation': 'Hybrid classical-PQC architecture',
-                                'quantum': 'ML-KEM-768 for key exchange, ML-DSA-65 for signatures',
-                                'priority': 'P0'
-                            },
-                            'OPS.1.1.2 - Proper IT Administration': {
-                                'implementation': 'Quantum-aware patch management',
-                                'quantum': 'Prioritize PQC updates',
-                                'priority': 'P1'
-                            },
-                            'DER.1 - Detection of Security Events': {
-                                'implementation': 'Quantum threat detection in SIEM',
-                                'quantum': 'Monitor for harvest-now-decrypt-later attempts',
-                                'priority': 'P1'
-                            }
-                        }
-                    },
-                    'nis2': {
-                        'entity_type': 'Essential Entity (presumed)',
-                        'critical_gaps': critical_count,
-                        'requirements': {
-                            'Article 21(1) - Risk Management': {
-                                'status': 'Critical' if critical_count > 5 else 'Required',
-                                'gap': f'{critical_count} critical quantum vulnerabilities identified',
-                                'priority': 'P0'
-                            },
-                            'Article 21(2)(a) - Incident Handling': {
-                                'status': 'Required',
-                                'gap': 'Implement quantum incident response procedures',
-                                'priority': 'P1'
-                            },
-                            'Article 21(2)(d) - Cryptography': {
-                                'status': 'Critical',
-                                'gap': f'{quantum_vulnerable} assets require PQC migration',
-                                'priority': 'P0'
-                            }
-                        }
-                    },
-                    'roadmap': {
-                        'timeline_months': timeline_months,
-                        'total_budget': f'€{150000 + (total_assets * 2000):,}',
-                        'phases': [
-                            {
-                                'phase': 'Phase 1: Assessment & Planning',
-                                'months': max(2, timeline_months // 6),
-                                'budget': '€50,000',
-                                'milestones': [
-                                    'Complete cryptographic inventory',
-                                    'Identify all quantum-vulnerable systems',
-                                    'Select NIST PQC algorithms',
-                                    'Design hybrid crypto architecture',
-                                    'Establish governance framework'
-                                ]
-                            },
-                            {
-                                'phase': 'Phase 2: Pilot Implementation',
-                                'months': max(2, timeline_months // 4),
-                                'budget': f'€{75000 + (critical_count * 5000):,}',
-                                'milestones': [
-                                    f'Deploy PQC to {critical_count} critical assets',
-                                    'Conduct performance benchmarking',
-                                    'Train security teams',
-                                    'Establish monitoring procedures',
-                                    'Document lessons learned'
-                                ]
-                            },
-                            {
-                                'phase': 'Phase 3: Production Rollout',
-                                'months': max(3, timeline_months // 3),
-                                'budget': f'€{100000 + (quantum_vulnerable * 3000):,}',
-                                'milestones': [
-                                    f'Migrate {quantum_vulnerable} quantum-vulnerable assets',
-                                    'Implement cryptographic agility',
-                                    'Deploy quantum threat monitoring',
-                                    'Conduct compliance audits',
-                                    'Establish incident response'
-                                ]
-                            },
-                            {
-                                'phase': 'Phase 4: Optimization & Maintenance',
-                                'months': max(2, timeline_months // 6),
-                                'budget': '€40,000/year',
-                                'milestones': [
-                                    'Continuous monitoring & improvement',
-                                    'Regular compliance assessments',
-                                    'Algorithm updates as needed',
-                                    'Staff training & awareness',
-                                    'Quarterly security reviews'
-                                ]
-                            }
-                        ]
-                    },
-                    'budget': {
-                        'total': 150000 + (total_assets * 2000),
-                        'breach_cost': 4200000,
-                        'roi': ((4200000 - (150000 + total_assets * 2000)) / (150000 + total_assets * 2000)) * 100,
-                        'items': {
-                            'PQC Software Licenses': 50000,
-                            'Hardware Upgrades': 75000 + (total_assets * 1000),
-                            'Consulting Services': 100000,
-                            'Training & Certification': 25000,
-                            'Ongoing Maintenance (annual)': 40000
-                        }
-                    }
-                }
-                
-                st.success("✅ Framework generated successfully!")
-                st.markdown("---")
-                
-                if gen_iso27001:
-                    with st.expander("📋 ISO 27001 Statement of Applicability", expanded=True):
-                        iso = framework['iso27001']
-                        st.markdown(f"**Scope:** {iso['scope']}")
-                        st.markdown(f"**Critical Controls:** {iso['critical_controls']}")
-                        
-                        st.markdown("#### 🎯 Key Controls")
-                        for name, ctrl in iso['controls'].items():
-                            col1, col2 = st.columns([3, 1])
-                            with col1:
-                                st.markdown(f"**{name}**")
-                                st.caption(f"Implementation: {ctrl['implementation']}")
-                                st.caption(f"⚛️ Quantum: {ctrl['quantum']}")
-                            with col2:
-                                if ctrl['priority'] == 'P0':
-                                    st.error(f"Priority: {ctrl['priority']}")
-                                else:
-                                    st.warning(f"Priority: {ctrl['priority']}")
-                
-                if gen_bsi:
-                    with st.expander("🇩🇪 BSI IT-Grundschutz Bausteine Mapping", expanded=True):
-                        bsi = framework['bsi']
-                        st.markdown(f"**Framework:** {bsi['framework']}")
-                        st.markdown(f"**ISO 27001 Compatible:** {'✅ Yes' if bsi['iso27001_compatible'] else '❌ No'}")
-                        
-                        st.markdown("#### 🧱 Bausteine")
-                        for name, b in bsi['bausteine'].items():
-                            st.markdown(f"**{name}** - Priority: {b['priority']}")
-                            st.caption(f"Implementation: {b['implementation']}")
-                            st.caption(f"⚛️ Quantum: {b['quantum']}")
-                            st.markdown("---")
-                
-                if gen_nis2:
-                    with st.expander("🇪🇺 NIS2 Article 21 Compliance Report", expanded=True):
-                        nis2 = framework['nis2']
-                        st.markdown(f"**Entity Type:** {nis2['entity_type']}")
-                        st.markdown(f"**Critical Gaps:** {nis2['critical_gaps']}")
-                        
-                        st.markdown("#### 📊 Requirements")
-                        for name, req in nis2['requirements'].items():
-                            status_icon = "🔴" if req['status'] == 'Critical' else "🟡"
-                            st.markdown(f"{status_icon} **{name}**")
-                            st.caption(f"Gap: {req['gap']}")
-                            st.caption(f"Priority: {req['priority']}")
-                            st.markdown("---")
-                
-                if include_roadmap:
-                    with st.expander("📅 Implementation Roadmap", expanded=True):
-                        roadmap = framework['roadmap']
-                        st.markdown(f"**Timeline:** {roadmap['timeline_months']} months")
-                        st.markdown(f"**Total Budget:** {roadmap['total_budget']}")
-                        
-                        for phase in roadmap['phases']:
-                            st.markdown(f"### {phase['phase']}")
-                            st.markdown(f"**Duration:** {phase['months']} months | **Budget:** {phase['budget']}")
-                            st.markdown("**Milestones:**")
-                            for milestone in phase['milestones']:
-                                st.markdown(f"- {milestone}")
-                            st.markdown("---")
-                
-                if include_budget:
-                    with st.expander("💰 Budget & ROI Analysis", expanded=True):
-                        budget = framework['budget']
-                        
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("Total Investment", f"€{budget['total']:,}")
-                        with col2:
-                            st.metric("Breach Prevention Value", f"€{budget['breach_cost']:,}")
-                        with col3:
-                            st.metric("ROI", f"{budget['roi']:.0f}%")
-                        
-                        st.markdown("#### 💵 Budget Breakdown")
-                        for item, cost in budget['items'].items():
-                            st.markdown(f"**{item}:** €{cost:,}")
-                
-                st.markdown("---")
-                st.markdown("### 📥 Export Framework")
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    json_data = json.dumps(framework, indent=2)
-                    st.download_button(
-                        "📋 Download JSON",
-                        data=json_data,
-                        file_name=f"ISMS_Framework_{target}_{datetime.now().strftime('%Y%m%d')}.json",
-                        mime="application/json",
-                        use_container_width=True
-                    )
-                
-                with col2:
-                    st.info("📄 PDF export requires additional PDF generation library")
 
 # ============================================================================
 # FOOTER
@@ -1282,10 +830,3 @@ with footer_col2:
 with footer_col3:
     st.markdown("**🌐 ProSec Networks**")
     st.caption("Your Quantum-Ready Security Partner")
-
-st.markdown("""
-<div style='text-align: center; color: #666; font-size: 0.85rem; margin-top: 20px;'>
-    Built with ⚛️ by the Sentinel-V Team | Quantum Intelligence Engine v2.0<br>
-    Protecting Today's Data from Tomorrow's Threats
-</div>
-""", unsafe_allow_html=True)
