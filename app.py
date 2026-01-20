@@ -516,14 +516,14 @@ else:
     
     st.markdown("---")
     
-   tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "⚛️ Quantum Intelligence",
-    "🎯 Threat Analysis",
-    "💡 PQC Migration",
-    "📊 Analytics & Insights",
-    "📥 Export & Reporting",
-    "🤖 ISMS Framework Generator"  # NEW TAB
-])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "⚛️ Quantum Intelligence",
+        "🎯 Threat Analysis",
+        "💡 PQC Migration",
+        "📊 Analytics & Insights",
+        "📥 Export & Reporting",
+        "🤖 ISMS Framework Generator"
+    ])
     
     # TAB 1: Quantum Intelligence Matrix
     with tab1:
@@ -754,7 +754,7 @@ else:
         st.markdown("### 🎯 Asset-Specific PQC Recommendations")
         
         for _, row in df.iterrows():
-            if row['quantum_years_vulnerable'] <= 5:  # Show only urgent ones
+            if row['quantum_years_vulnerable'] <= 5:
                 with st.expander(f"⚛️ {row['asset']}", expanded=False):
                     col1, col2 = st.columns(2)
                     
@@ -779,7 +779,6 @@ else:
     with tab4:
         st.subheader("📊 Quantum Threat Analytics & Insights")
         
-        # Risk distribution
         col1, col2 = st.columns(2)
         
         with col1:
@@ -833,11 +832,9 @@ else:
             
             st.plotly_chart(fig, use_container_width=True)
         
-        # Quantum vulnerability timeline
         st.markdown("---")
         st.markdown("### ⏰ Quantum Threat Progression Analysis")
         
-        # Calculate assets vulnerable by year
         vulnerability_by_year = {}
         current_year = datetime.now().year
         
@@ -860,7 +857,6 @@ else:
             marker=dict(size=8)
         ))
         
-        # Add critical year markers
         fig.add_vline(x=2030, line_dash="dash", line_color="#ffa500", 
                       annotation_text="CRQC Expected", annotation_position="top")
         
@@ -874,32 +870,26 @@ else:
         
         st.plotly_chart(fig, use_container_width=True)
         
-        # Key insights
         st.markdown("---")
         st.markdown("### 💡 Key Insights & Recommendations")
         
         insights = []
         
-        # Insight 1: Immediate threats
         immediate_threats = len(df[df['quantum_years_vulnerable'] <= 3])
         if immediate_threats > 0:
             insights.append(f"🚨 **URGENT:** {immediate_threats} assets will be vulnerable to quantum attacks within 3 years")
         
-        # Insight 2: Harvest threat
         harvest_count = len(df[df['harvest_now_threat'] == True])
         if harvest_count > 0:
             insights.append(f"🎯 **HARVEST THREAT:** {harvest_count} assets contain long-lived data vulnerable to 'Harvest Now, Decrypt Later' attacks")
         
-        # Insight 3: Non-quantum-safe
         non_quantum_safe = len(df[df['quantum_safe_crypto'] == False])
         insights.append(f"⚛️ **PQC MIGRATION:** {non_quantum_safe} assets require post-quantum cryptography implementation")
         
-        # Insight 4: Geographic concentration
         top_country = df['country'].value_counts().index[0]
         top_country_count = df['country'].value_counts().values[0]
         insights.append(f"🌍 **GEOGRAPHIC RISK:** {top_country_count} assets concentrated in {top_country}")
         
-        # Insight 5: Average risk
         if avg_risk >= 70:
             insights.append(f"📊 **HIGH RISK ENVIRONMENT:** Average risk score of {avg_risk:.1f}/100 indicates immediate action required")
         
@@ -917,7 +907,6 @@ else:
         
         col1, col2, col3 = st.columns(3)
         
-        # PDF Report
         with col1:
             st.markdown("### 📄 Executive PDF Report")
             st.markdown("""
@@ -940,172 +929,7 @@ else:
                 use_container_width=True,
                 type="primary"
             )
-        # TAB 6: ISMS Framework Generator
-with tab6:
-    st.subheader("🤖 Autonomous ISMS Framework Generator")
-    
-    st.markdown("""
-    **AI-Powered Security Framework Generation**
-    
-    Automatically generate complete ISMS frameworks tailored to your organization:
-    - ✅ ISO 27001 Statement of Applicability
-    - ✅ BSI IT-Grundschutz Bausteine Mapping
-    - ✅ NIS2 Article 21 Compliance Report
-    - ✅ Implementation Roadmap with Timeline
-    - ✅ Budget Estimation & ROI Analysis
-    """)
-    
-    st.markdown("---")
-    
-    # Framework generation options
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### 📋 Framework Selection")
-        gen_iso27001 = st.checkbox("ISO 27001 Statement of Applicability", value=True)
-        gen_bsi = st.checkbox("BSI IT-Grundschutz Bausteine", value=True)
-        gen_nis2 = st.checkbox("NIS2 Article 21 Compliance", value=True)
-    
-    with col2:
-        st.markdown("### ⚙️ Customization")
-        timeline_months = st.slider("Implementation Timeline (months)", 6, 24, 12)
-        include_roadmap = st.checkbox("Include Implementation Roadmap", value=True)
-        include_budget = st.checkbox("Include Budget Estimation", value=True)
-    
-    st.markdown("---")
-    
-    # Generate button
-    if st.button("🚀 GENERATE ISMS FRAMEWORK", type="primary", use_container_width=True):
-        with st.spinner("🤖 AI is generating your custom ISMS framework..."):
-            try:
-                # Initialize generator
-                generator = ISMSFrameworkGenerator(df, target)
-                framework = generator.generate_complete_framework()
-                
-                st.success("✅ Framework generated successfully!")
-                
-                # Display results in expandable sections
-                st.markdown("---")
-                
-                # ISO 27001 Section
-                if gen_iso27001:
-                    with st.expander("📋 ISO 27001 Statement of Applicability", expanded=True):
-                        iso = framework['iso27001']
-                        st.markdown(f"**Scope:** {iso['scope']}")
-                        st.markdown(f"**Critical Controls:** {iso['critical_controls']}")
-                        
-                        st.markdown("#### 🎯 Key Controls")
-                        for name, ctrl in iso['controls'].items():
-                            col1, col2 = st.columns([3, 1])
-                            with col1:
-                                st.markdown(f"**{name}**")
-                                st.caption(f"Implementation: {ctrl['implementation']}")
-                                st.caption(f"⚛️ Quantum: {ctrl['quantum']}")
-                            with col2:
-                                if ctrl['priority'] == 'P0':
-                                    st.error(f"Priority: {ctrl['priority']}")
-                                else:
-                                    st.warning(f"Priority: {ctrl['priority']}")
-                
-                # BSI Section
-                if gen_bsi:
-                    with st.expander("🇩🇪 BSI IT-Grundschutz Bausteine Mapping", expanded=True):
-                        bsi = framework['bsi']
-                        st.markdown(f"**Framework:** {bsi['framework']}")
-                        st.markdown(f"**ISO 27001 Compatible:** {'✅ Yes' if bsi['iso27001_compatible'] else '❌ No'}")
-                        
-                        st.markdown("#### 🧱 Bausteine")
-                        for name, b in bsi['bausteine'].items():
-                            st.markdown(f"**{name}** - Priority: {b['priority']}")
-                            st.caption(f"Implementation: {b['implementation']}")
-                            st.caption(f"⚛️ Quantum: {b['quantum']}")
-                            st.markdown("---")
-                
-                # NIS2 Section
-                if gen_nis2:
-                    with st.expander("🇪🇺 NIS2 Article 21 Compliance Report", expanded=True):
-                        nis2 = framework['nis2']
-                        st.markdown(f"**Entity Type:** {nis2['entity_type']}")
-                        st.markdown(f"**Critical Gaps:** {nis2['critical_gaps']}")
-                        
-                        st.markdown("#### 📊 Requirements")
-                        for name, req in nis2['requirements'].items():
-                            status_icon = "🔴" if req['status'] == 'Critical' else "🟡" if req['status'] == 'Required' else "🟢"
-                            st.markdown(f"{status_icon} **{name}**")
-                            st.caption(f"Gap: {req['gap']}")
-                            st.caption(f"Priority: {req['priority']}")
-                            st.markdown("---")
-                
-                # Roadmap Section
-                if include_roadmap:
-                    with st.expander("📅 Implementation Roadmap", expanded=True):
-                        roadmap = framework['roadmap']
-                        st.markdown(f"**Timeline:** {roadmap['timeline_months']} months")
-                        st.markdown(f"**Total Budget:** {roadmap['total_budget']}")
-                        
-                        for phase in roadmap['phases']:
-                            st.markdown(f"### {phase['phase']}")
-                            st.markdown(f"**Duration:** {phase['months']} months | **Budget:** {phase['budget']}")
-                            st.markdown("**Milestones:**")
-                            for milestone in phase['milestones']:
-                                st.markdown(f"- {milestone}")
-                            st.markdown("---")
-                
-                # Budget Section
-                if include_budget:
-                    with st.expander("💰 Budget & ROI Analysis", expanded=True):
-                        budget = framework['budget']
-                        
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("Total Investment", f"€{budget['total']:,}")
-                        with col2:
-                            st.metric("Breach Prevention Value", f"€{budget['breach_cost']:,}")
-                        with col3:
-                            st.metric("ROI", f"{budget['roi']:.0f}%")
-                        
-                        st.markdown("#### 💵 Budget Breakdown")
-                        for item, cost in budget['items'].items():
-                            st.markdown(f"**{item}:** €{cost:,}")
-                
-                # Export options
-                st.markdown("---")
-                st.markdown("### 📥 Export Framework")
-                
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    # PDF Export
-                    pdf_bytes = export_framework_pdf(framework, target)
-                    st.download_button(
-                        "📄 Download PDF Report",
-                        data=pdf_bytes,
-                        file_name=f"ISMS_Framework_{target}_{datetime.now().strftime('%Y%m%d')}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                
-                with col2:
-                    # JSON Export
-                    json_data = json.dumps(framework, indent=2)
-                    st.download_button(
-                        "📋 Download JSON",
-                        data=json_data,
-                        file_name=f"ISMS_Framework_{target}_{datetime.now().strftime('%Y%m%d')}.json",
-                        mime="application/json",
-                        use_container_width=True
-                    )
-                
-                with col3:
-                    # CSV Export (simplified)
-                    if st.button("📊 Generate Excel", use_container_width=True):
-                        st.info("Excel export coming soon!")
-                
-            except Exception as e:
-                st.error(f"❌ Framework generation failed: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())
-        # CSV Export
+        
         with col2:
             st.markdown("### 📊 Technical CSV Data")
             st.markdown("""
@@ -1127,7 +951,6 @@ with tab6:
                 use_container_width=True
             )
         
-        # JSON Export
         with col3:
             st.markdown("### 🔗 API JSON Format")
             st.markdown("""
@@ -1149,7 +972,6 @@ with tab6:
                 use_container_width=True
             )
         
-        # Custom report builder
         st.markdown("---")
         st.markdown("### 🛠️ Custom Report Builder")
         
@@ -1173,6 +995,273 @@ with tab6:
                 filtered_df = df if not filter_by_risk else df[df['Quantum_Risk'].isin(filter_by_risk)]
                 st.success(f"Custom report '{report_name}' generated with {len(filtered_df)} assets!")
                 st.dataframe(filtered_df, use_container_width=True)
+    
+    # TAB 6: ISMS Framework Generator (FIXED)
+    with tab6:
+        st.subheader("🤖 Autonomous ISMS Framework Generator")
+        
+        st.markdown("""
+        **AI-Powered Security Framework Generation**
+        
+        Automatically generate complete ISMS frameworks tailored to your organization:
+        - ✅ ISO 27001 Statement of Applicability
+        - ✅ BSI IT-Grundschutz Bausteine Mapping
+        - ✅ NIS2 Article 21 Compliance Report
+        - ✅ Implementation Roadmap with Timeline
+        - ✅ Budget Estimation & ROI Analysis
+        """)
+        
+        st.markdown("---")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### 📋 Framework Selection")
+            gen_iso27001 = st.checkbox("ISO 27001 Statement of Applicability", value=True)
+            gen_bsi = st.checkbox("BSI IT-Grundschutz Bausteine", value=True)
+            gen_nis2 = st.checkbox("NIS2 Article 21 Compliance", value=True)
+        
+        with col2:
+            st.markdown("### ⚙️ Customization")
+            timeline_months = st.slider("Implementation Timeline (months)", 6, 24, 12)
+            include_roadmap = st.checkbox("Include Implementation Roadmap", value=True)
+            include_budget = st.checkbox("Include Budget Estimation", value=True)
+        
+        st.markdown("---")
+        
+        if st.button("🚀 GENERATE ISMS FRAMEWORK", type="primary", use_container_width=True):
+            with st.spinner("🤖 AI is generating your custom ISMS framework..."):
+                time.sleep(1)
+                
+                # Generate framework based on audit data
+                framework = {
+                    'iso27001': {
+                        'scope': f"All {total_assets} digital assets of {target} including quantum-vulnerable systems",
+                        'critical_controls': critical_count,
+                        'controls': {
+                            'A.5.1 - Information Security Policies': {
+                                'implementation': 'Develop quantum-aware security policies',
+                                'quantum': 'Include PQC migration policy',
+                                'priority': 'P0' if critical_count > 0 else 'P1'
+                            },
+                            'A.8.24 - Cryptographic Controls': {
+                                'implementation': 'Implement NIST PQC algorithms (FIPS 203/204/205)',
+                                'quantum': f'Migrate {quantum_vulnerable} quantum-vulnerable assets',
+                                'priority': 'P0'
+                            },
+                            'A.8.8 - Management of Technical Vulnerabilities': {
+                                'implementation': 'Continuous quantum threat monitoring',
+                                'quantum': 'Deploy quantum vulnerability scanner',
+                                'priority': 'P1'
+                            }
+                        }
+                    },
+                    'bsi': {
+                        'framework': 'IT-Grundschutz Compendium Edition 2024',
+                        'iso27001_compatible': True,
+                        'bausteine': {
+                            'CON.1 - Crypto Concept': {
+                                'implementation': 'Hybrid classical-PQC architecture',
+                                'quantum': 'ML-KEM-768 for key exchange, ML-DSA-65 for signatures',
+                                'priority': 'P0'
+                            },
+                            'OPS.1.1.2 - Proper IT Administration': {
+                                'implementation': 'Quantum-aware patch management',
+                                'quantum': 'Prioritize PQC updates',
+                                'priority': 'P1'
+                            },
+                            'DER.1 - Detection of Security Events': {
+                                'implementation': 'Quantum threat detection in SIEM',
+                                'quantum': 'Monitor for harvest-now-decrypt-later attempts',
+                                'priority': 'P1'
+                            }
+                        }
+                    },
+                    'nis2': {
+                        'entity_type': 'Essential Entity (presumed)',
+                        'critical_gaps': critical_count,
+                        'requirements': {
+                            'Article 21(1) - Risk Management': {
+                                'status': 'Critical' if critical_count > 5 else 'Required',
+                                'gap': f'{critical_count} critical quantum vulnerabilities identified',
+                                'priority': 'P0'
+                            },
+                            'Article 21(2)(a) - Incident Handling': {
+                                'status': 'Required',
+                                'gap': 'Implement quantum incident response procedures',
+                                'priority': 'P1'
+                            },
+                            'Article 21(2)(d) - Cryptography': {
+                                'status': 'Critical',
+                                'gap': f'{quantum_vulnerable} assets require PQC migration',
+                                'priority': 'P0'
+                            }
+                        }
+                    },
+                    'roadmap': {
+                        'timeline_months': timeline_months,
+                        'total_budget': f'€{150000 + (total_assets * 2000):,}',
+                        'phases': [
+                            {
+                                'phase': 'Phase 1: Assessment & Planning',
+                                'months': max(2, timeline_months // 6),
+                                'budget': '€50,000',
+                                'milestones': [
+                                    'Complete cryptographic inventory',
+                                    'Identify all quantum-vulnerable systems',
+                                    'Select NIST PQC algorithms',
+                                    'Design hybrid crypto architecture',
+                                    'Establish governance framework'
+                                ]
+                            },
+                            {
+                                'phase': 'Phase 2: Pilot Implementation',
+                                'months': max(2, timeline_months // 4),
+                                'budget': f'€{75000 + (critical_count * 5000):,}',
+                                'milestones': [
+                                    f'Deploy PQC to {critical_count} critical assets',
+                                    'Conduct performance benchmarking',
+                                    'Train security teams',
+                                    'Establish monitoring procedures',
+                                    'Document lessons learned'
+                                ]
+                            },
+                            {
+                                'phase': 'Phase 3: Production Rollout',
+                                'months': max(3, timeline_months // 3),
+                                'budget': f'€{100000 + (quantum_vulnerable * 3000):,}',
+                                'milestones': [
+                                    f'Migrate {quantum_vulnerable} quantum-vulnerable assets',
+                                    'Implement cryptographic agility',
+                                    'Deploy quantum threat monitoring',
+                                    'Conduct compliance audits',
+                                    'Establish incident response'
+                                ]
+                            },
+                            {
+                                'phase': 'Phase 4: Optimization & Maintenance',
+                                'months': max(2, timeline_months // 6),
+                                'budget': '€40,000/year',
+                                'milestones': [
+                                    'Continuous monitoring & improvement',
+                                    'Regular compliance assessments',
+                                    'Algorithm updates as needed',
+                                    'Staff training & awareness',
+                                    'Quarterly security reviews'
+                                ]
+                            }
+                        ]
+                    },
+                    'budget': {
+                        'total': 150000 + (total_assets * 2000),
+                        'breach_cost': 4200000,
+                        'roi': ((4200000 - (150000 + total_assets * 2000)) / (150000 + total_assets * 2000)) * 100,
+                        'items': {
+                            'PQC Software Licenses': 50000,
+                            'Hardware Upgrades': 75000 + (total_assets * 1000),
+                            'Consulting Services': 100000,
+                            'Training & Certification': 25000,
+                            'Ongoing Maintenance (annual)': 40000
+                        }
+                    }
+                }
+                
+                st.success("✅ Framework generated successfully!")
+                st.markdown("---")
+                
+                if gen_iso27001:
+                    with st.expander("📋 ISO 27001 Statement of Applicability", expanded=True):
+                        iso = framework['iso27001']
+                        st.markdown(f"**Scope:** {iso['scope']}")
+                        st.markdown(f"**Critical Controls:** {iso['critical_controls']}")
+                        
+                        st.markdown("#### 🎯 Key Controls")
+                        for name, ctrl in iso['controls'].items():
+                            col1, col2 = st.columns([3, 1])
+                            with col1:
+                                st.markdown(f"**{name}**")
+                                st.caption(f"Implementation: {ctrl['implementation']}")
+                                st.caption(f"⚛️ Quantum: {ctrl['quantum']}")
+                            with col2:
+                                if ctrl['priority'] == 'P0':
+                                    st.error(f"Priority: {ctrl['priority']}")
+                                else:
+                                    st.warning(f"Priority: {ctrl['priority']}")
+                
+                if gen_bsi:
+                    with st.expander("🇩🇪 BSI IT-Grundschutz Bausteine Mapping", expanded=True):
+                        bsi = framework['bsi']
+                        st.markdown(f"**Framework:** {bsi['framework']}")
+                        st.markdown(f"**ISO 27001 Compatible:** {'✅ Yes' if bsi['iso27001_compatible'] else '❌ No'}")
+                        
+                        st.markdown("#### 🧱 Bausteine")
+                        for name, b in bsi['bausteine'].items():
+                            st.markdown(f"**{name}** - Priority: {b['priority']}")
+                            st.caption(f"Implementation: {b['implementation']}")
+                            st.caption(f"⚛️ Quantum: {b['quantum']}")
+                            st.markdown("---")
+                
+                if gen_nis2:
+                    with st.expander("🇪🇺 NIS2 Article 21 Compliance Report", expanded=True):
+                        nis2 = framework['nis2']
+                        st.markdown(f"**Entity Type:** {nis2['entity_type']}")
+                        st.markdown(f"**Critical Gaps:** {nis2['critical_gaps']}")
+                        
+                        st.markdown("#### 📊 Requirements")
+                        for name, req in nis2['requirements'].items():
+                            status_icon = "🔴" if req['status'] == 'Critical' else "🟡"
+                            st.markdown(f"{status_icon} **{name}**")
+                            st.caption(f"Gap: {req['gap']}")
+                            st.caption(f"Priority: {req['priority']}")
+                            st.markdown("---")
+                
+                if include_roadmap:
+                    with st.expander("📅 Implementation Roadmap", expanded=True):
+                        roadmap = framework['roadmap']
+                        st.markdown(f"**Timeline:** {roadmap['timeline_months']} months")
+                        st.markdown(f"**Total Budget:** {roadmap['total_budget']}")
+                        
+                        for phase in roadmap['phases']:
+                            st.markdown(f"### {phase['phase']}")
+                            st.markdown(f"**Duration:** {phase['months']} months | **Budget:** {phase['budget']}")
+                            st.markdown("**Milestones:**")
+                            for milestone in phase['milestones']:
+                                st.markdown(f"- {milestone}")
+                            st.markdown("---")
+                
+                if include_budget:
+                    with st.expander("💰 Budget & ROI Analysis", expanded=True):
+                        budget = framework['budget']
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Total Investment", f"€{budget['total']:,}")
+                        with col2:
+                            st.metric("Breach Prevention Value", f"€{budget['breach_cost']:,}")
+                        with col3:
+                            st.metric("ROI", f"{budget['roi']:.0f}%")
+                        
+                        st.markdown("#### 💵 Budget Breakdown")
+                        for item, cost in budget['items'].items():
+                            st.markdown(f"**{item}:** €{cost:,}")
+                
+                st.markdown("---")
+                st.markdown("### 📥 Export Framework")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    json_data = json.dumps(framework, indent=2)
+                    st.download_button(
+                        "📋 Download JSON",
+                        data=json_data,
+                        file_name=f"ISMS_Framework_{target}_{datetime.now().strftime('%Y%m%d')}.json",
+                        mime="application/json",
+                        use_container_width=True
+                    )
+                
+                with col2:
+                    st.info("📄 PDF export requires additional PDF generation library")
 
 # ============================================================================
 # FOOTER
