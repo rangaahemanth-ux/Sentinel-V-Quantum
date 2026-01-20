@@ -516,13 +516,14 @@ else:
     
     st.markdown("---")
     
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "⚛️ Quantum Intelligence",
-        "🎯 Threat Analysis",
-        "💡 PQC Migration",
-        "📊 Analytics & Insights",
-        "📥 Export & Reporting"
-    ])
+   tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "⚛️ Quantum Intelligence",
+    "🎯 Threat Analysis",
+    "💡 PQC Migration",
+    "📊 Analytics & Insights",
+    "📥 Export & Reporting",
+    "🤖 ISMS Framework Generator"  # NEW TAB
+])
     
     # TAB 1: Quantum Intelligence Matrix
     with tab1:
@@ -939,7 +940,171 @@ else:
                 use_container_width=True,
                 type="primary"
             )
-        
+        # TAB 6: ISMS Framework Generator
+with tab6:
+    st.subheader("🤖 Autonomous ISMS Framework Generator")
+    
+    st.markdown("""
+    **AI-Powered Security Framework Generation**
+    
+    Automatically generate complete ISMS frameworks tailored to your organization:
+    - ✅ ISO 27001 Statement of Applicability
+    - ✅ BSI IT-Grundschutz Bausteine Mapping
+    - ✅ NIS2 Article 21 Compliance Report
+    - ✅ Implementation Roadmap with Timeline
+    - ✅ Budget Estimation & ROI Analysis
+    """)
+    
+    st.markdown("---")
+    
+    # Framework generation options
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 📋 Framework Selection")
+        gen_iso27001 = st.checkbox("ISO 27001 Statement of Applicability", value=True)
+        gen_bsi = st.checkbox("BSI IT-Grundschutz Bausteine", value=True)
+        gen_nis2 = st.checkbox("NIS2 Article 21 Compliance", value=True)
+    
+    with col2:
+        st.markdown("### ⚙️ Customization")
+        timeline_months = st.slider("Implementation Timeline (months)", 6, 24, 12)
+        include_roadmap = st.checkbox("Include Implementation Roadmap", value=True)
+        include_budget = st.checkbox("Include Budget Estimation", value=True)
+    
+    st.markdown("---")
+    
+    # Generate button
+    if st.button("🚀 GENERATE ISMS FRAMEWORK", type="primary", use_container_width=True):
+        with st.spinner("🤖 AI is generating your custom ISMS framework..."):
+            try:
+                # Initialize generator
+                generator = ISMSFrameworkGenerator(df, target)
+                framework = generator.generate_complete_framework()
+                
+                st.success("✅ Framework generated successfully!")
+                
+                # Display results in expandable sections
+                st.markdown("---")
+                
+                # ISO 27001 Section
+                if gen_iso27001:
+                    with st.expander("📋 ISO 27001 Statement of Applicability", expanded=True):
+                        iso = framework['iso27001']
+                        st.markdown(f"**Scope:** {iso['scope']}")
+                        st.markdown(f"**Critical Controls:** {iso['critical_controls']}")
+                        
+                        st.markdown("#### 🎯 Key Controls")
+                        for name, ctrl in iso['controls'].items():
+                            col1, col2 = st.columns([3, 1])
+                            with col1:
+                                st.markdown(f"**{name}**")
+                                st.caption(f"Implementation: {ctrl['implementation']}")
+                                st.caption(f"⚛️ Quantum: {ctrl['quantum']}")
+                            with col2:
+                                if ctrl['priority'] == 'P0':
+                                    st.error(f"Priority: {ctrl['priority']}")
+                                else:
+                                    st.warning(f"Priority: {ctrl['priority']}")
+                
+                # BSI Section
+                if gen_bsi:
+                    with st.expander("🇩🇪 BSI IT-Grundschutz Bausteine Mapping", expanded=True):
+                        bsi = framework['bsi']
+                        st.markdown(f"**Framework:** {bsi['framework']}")
+                        st.markdown(f"**ISO 27001 Compatible:** {'✅ Yes' if bsi['iso27001_compatible'] else '❌ No'}")
+                        
+                        st.markdown("#### 🧱 Bausteine")
+                        for name, b in bsi['bausteine'].items():
+                            st.markdown(f"**{name}** - Priority: {b['priority']}")
+                            st.caption(f"Implementation: {b['implementation']}")
+                            st.caption(f"⚛️ Quantum: {b['quantum']}")
+                            st.markdown("---")
+                
+                # NIS2 Section
+                if gen_nis2:
+                    with st.expander("🇪🇺 NIS2 Article 21 Compliance Report", expanded=True):
+                        nis2 = framework['nis2']
+                        st.markdown(f"**Entity Type:** {nis2['entity_type']}")
+                        st.markdown(f"**Critical Gaps:** {nis2['critical_gaps']}")
+                        
+                        st.markdown("#### 📊 Requirements")
+                        for name, req in nis2['requirements'].items():
+                            status_icon = "🔴" if req['status'] == 'Critical' else "🟡" if req['status'] == 'Required' else "🟢"
+                            st.markdown(f"{status_icon} **{name}**")
+                            st.caption(f"Gap: {req['gap']}")
+                            st.caption(f"Priority: {req['priority']}")
+                            st.markdown("---")
+                
+                # Roadmap Section
+                if include_roadmap:
+                    with st.expander("📅 Implementation Roadmap", expanded=True):
+                        roadmap = framework['roadmap']
+                        st.markdown(f"**Timeline:** {roadmap['timeline_months']} months")
+                        st.markdown(f"**Total Budget:** {roadmap['total_budget']}")
+                        
+                        for phase in roadmap['phases']:
+                            st.markdown(f"### {phase['phase']}")
+                            st.markdown(f"**Duration:** {phase['months']} months | **Budget:** {phase['budget']}")
+                            st.markdown("**Milestones:**")
+                            for milestone in phase['milestones']:
+                                st.markdown(f"- {milestone}")
+                            st.markdown("---")
+                
+                # Budget Section
+                if include_budget:
+                    with st.expander("💰 Budget & ROI Analysis", expanded=True):
+                        budget = framework['budget']
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Total Investment", f"€{budget['total']:,}")
+                        with col2:
+                            st.metric("Breach Prevention Value", f"€{budget['breach_cost']:,}")
+                        with col3:
+                            st.metric("ROI", f"{budget['roi']:.0f}%")
+                        
+                        st.markdown("#### 💵 Budget Breakdown")
+                        for item, cost in budget['items'].items():
+                            st.markdown(f"**{item}:** €{cost:,}")
+                
+                # Export options
+                st.markdown("---")
+                st.markdown("### 📥 Export Framework")
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    # PDF Export
+                    pdf_bytes = export_framework_pdf(framework, target)
+                    st.download_button(
+                        "📄 Download PDF Report",
+                        data=pdf_bytes,
+                        file_name=f"ISMS_Framework_{target}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                
+                with col2:
+                    # JSON Export
+                    json_data = json.dumps(framework, indent=2)
+                    st.download_button(
+                        "📋 Download JSON",
+                        data=json_data,
+                        file_name=f"ISMS_Framework_{target}_{datetime.now().strftime('%Y%m%d')}.json",
+                        mime="application/json",
+                        use_container_width=True
+                    )
+                
+                with col3:
+                    # CSV Export (simplified)
+                    if st.button("📊 Generate Excel", use_container_width=True):
+                        st.info("Excel export coming soon!")
+                
+            except Exception as e:
+                st.error(f"❌ Framework generation failed: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
         # CSV Export
         with col2:
             st.markdown("### 📊 Technical CSV Data")
